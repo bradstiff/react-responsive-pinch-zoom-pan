@@ -8,7 +8,8 @@
     "prepublishOnly": "npm run transpile",
     "transpile": "babel src -d dist --copy-files",
     "build": "webpack --mode production",
-    "start": "webpack-dev-server --mode development"
+    "start": "webpack-dev-server --mode development",
+    "deploy": "npm run build && gh-pages -d examples/dist -r git@github.com:bradstiff/react-responsive-pinch-zoom-pan.git"
   },
   "keywords": [
     "react",
@@ -30,6 +31,7 @@
     "babel-preset-env": "^1.6.1",
     "babel-preset-react": "^6.24.1",
     "css-loader": "^0.28.11",
+    "gh-pages": "^1.1.0",
     "html-webpack-plugin": "^3.2.0",
     "react": "^16.3.0",
     "react-dom": "^16.3.0",
