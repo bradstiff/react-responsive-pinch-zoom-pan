@@ -1,6 +1,6 @@
 {
   "name": "react-responsive-pinch-zoom-pan",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Enables zooming and panning an image, both mobile and desktop.",
   "main": "dist/PinchZoomPan.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "transpile": "babel src -d dist --copy-files",
     "build": "webpack --mode production",
     "start": "webpack-dev-server --mode development",
-    "deploy": "npm run build && gh-pages -d examples/dist -r git@github.com:bradstiff/react-responsive-pinch-zoom-pan.git"
+    "deploy": "npm run build && gh-pages -d examples/dist"
   },
   "keywords": [
     "react",
