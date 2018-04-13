@@ -1,6 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-//import { Button, Glyphicon } from 'react-bootstrap';
+import FontAwesomeIcon from '@fortawesome/react-fontawesome';
+import faPlus from '@fortawesome/fontawesome-free-solid/faPlus';
+import faMinus from '@fortawesome/fontawesome-free-solid/faMinus';
+import './styles.css';
 
 const SNAP_TOLERANCE = 0.001;
 const OVER_TRANSFORMATION_TOLERANCE = 0.05;
@@ -33,15 +36,15 @@ const getDistanceBetweenPoints = (pointA, pointB) => (
     Math.sqrt(Math.pow(pointA.y - pointB.y, 2) + Math.pow(pointA.x - pointB.x, 2))
 );
 
-//const ZoomOutButton = ({ disabled, onClick }) => (
-//    <Button style={{ margin: '10px' }} onClick={onClick} disabled={disabled}>
-//        <Glyphicon glyph='minus' />
-//    </Button >);
+const ZoomOutButton = ({ disabled, onClick }) => (
+    <button className='iconButton' style={{ margin: '10px' }} onClick={onClick} disabled={disabled}>
+        <FontAwesomeIcon icon={faMinus} />
+    </button>);
 
-//const ZoomInButton = ({ disabled, onClick }) => (
-//    <Button style={{ margin: '10px', marginLeft: 0 }} onClick={onClick} disabled={disabled}>
-//        <Glyphicon glyph='plus' />
-//    </Button>);
+const ZoomInButton = ({ disabled, onClick }) => (
+    <button className='iconButton' style={{ margin: '10px', marginLeft: '0px' }} onClick={onClick} disabled={disabled}>
+        <FontAwesomeIcon icon={faPlus} />
+    </button>);
 
 export default class PinchZoomPan extends React.Component {
     constructor(props) {
@@ -301,8 +304,12 @@ export default class PinchZoomPan extends React.Component {
         };
         return (
             <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '100%' }}>
-                <div style={{ position: 'absolute', zIndex: 1000 }}>
-                </div>
+                {this.props.zoomButtons && (
+                    <div style={{ position: 'absolute', zIndex: 1000 }}>
+                        <ZoomOutButton onClick={() => this.zoomOut()} disabled={this.state.scale <= this.minScale} />
+                        <ZoomInButton onClick={() => this.zoomIn()} disabled={this.state.scale >= this.props.maxScale} />
+                    </div>
+                )}
                 {React.cloneElement(childElement, {
                     onTouchStart: this.handleTouchStart,
                     onTouchEnd: this.handleTouchEnd,
@@ -415,6 +422,7 @@ PinchZoomPan.defaultProps = {
     initialScale: 'auto',
     minScale: 'auto',
     maxScale: 1,
+    zoomButtons: true,
 };
 
 PinchZoomPan.propTypes = {

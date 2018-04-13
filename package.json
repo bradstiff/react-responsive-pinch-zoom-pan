@@ -1,13 +1,12 @@
 {
   "name": "react-responsive-pinch-zoom-pan",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "description": "Enables zooming and panning an image, both mobile and desktop.",
   "main": "dist/PinchZoomPan.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "compile": "babel src -d dist",
-    "watch": "babel src -w -d dist",
-    "prepare": "npm run compile",
+    "prepublishOnly": "npm run transpile",
+    "transpile": "babel src -d dist --copy-files",
     "build": "webpack --mode production",
     "start": "webpack-dev-server --mode development"
   },
@@ -27,11 +26,11 @@
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.4",
     "babel-preset-env": "^1.6.1",
     "babel-preset-react": "^6.24.1",
-    "babel-loader": "^7.1.4",
+    "css-loader": "^0.28.11",
     "html-webpack-plugin": "^3.2.0",
-    "raf": "^3.4.0",
     "react": "^16.3.0",
     "react-dom": "^16.3.0",
     "style-loader": "^0.20.3",
@@ -44,5 +43,10 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:bradstiff/react-responsive-pinch-zoom-pan.git"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome": "^1.1.5",
+    "@fortawesome/fontawesome-free-solid": "^5.0.10",
+    "@fortawesome/react-fontawesome": "0.0.18"
   }
 }
