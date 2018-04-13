@@ -60,6 +60,7 @@ export default class PinchZoomPan extends React.Component {
         this.handleMouseUp = this.handleMouseUp.bind(this);
         this.handleMouseWheel = this.handleMouseWheel.bind(this);
         this.handleWindowResize = this.handleWindowResize.bind(this);
+        this.handleImageLoad = this.handleImageLoad.bind(this);
     }
 
     //event handlers
@@ -140,7 +141,11 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleWindowResize(event) {
-        this.forceUpdate();
+        this.ensureConstraints();
+    }
+
+    handleImageLoad() {
+        this.ensureConstraints();
     }
 
     //actions
@@ -318,6 +323,7 @@ export default class PinchZoomPan extends React.Component {
                     onMouseUp: this.handleMouseUp,
                     onWheel: this.handleMouseWheel,
                     onDragStart: event => event.preventDefault(),
+                    onLoad: this.handleImageLoad,
                     ref: composedRef,
                     style: {
                         cursor: 'pointer',
@@ -357,14 +363,7 @@ export default class PinchZoomPan extends React.Component {
 
     componentDidUpdate(prevProps, prevState) {
         if (this.image.offsetWidth && this.image.offsetHeight) {
-            const negativeSpace = this.calculateNegativeSpace(1);
-            if (!this.lastUnzoomedNegativeSpace ||
-                negativeSpace.height !== this.lastUnzoomedNegativeSpace.height ||
-                negativeSpace.width !== this.lastUnzoomedNegativeSpace.width) {
-                //image and/or container dimensions have been set / updated
-                this.applyConstraints();
-            }
-
+            this.ensureConstraints();
             if (typeof this.state.scale === 'undefined') {
                 //reset to new props
                 this.transformToProps();
@@ -377,7 +376,21 @@ export default class PinchZoomPan extends React.Component {
         window.removeEventListener('resize', this.handleWindowResize);
     }
 
-    //helper methods
+    //sizing methods
+    ensureConstraints() {
+        if (this.image.offsetWidth && this.image.offsetHeight) {
+            const negativeSpace = this.calculateNegativeSpace(1);
+            if (!this.lastUnzoomedNegativeSpace ||
+                negativeSpace.height !== this.lastUnzoomedNegativeSpace.height ||
+                negativeSpace.width !== this.lastUnzoomedNegativeSpace.width) {
+
+                //image and/or container dimensions have been set / updated
+                this.applyConstraints();
+                this.forceUpdate();
+            }
+        }
+    }
+
     applyConstraints() {
         let minScale = 1;
         if (this.props.minScale === 'auto') {
