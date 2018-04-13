@@ -1,6 +1,8 @@
 # react-responsive-pinch-zoom-pan
 
-A React component that adds pinch-zoom and pan capability to an `<img>` or `<canvas>` element using css transforms. Both mobile and desktop browsers are supported. On desktop browsers, zoom is triggered via the mouse scrollwheel.
+A React component that adds pinch-zoom and pan capability to an `<img>` element. Both mobile and desktop browsers are supported. On desktop browsers, zoom is triggered via the mouse scrollwheel.
+
+Zoom and pan are applied using CSS transforms. 
 
 ## Install
 
