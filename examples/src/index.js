@@ -4,8 +4,8 @@ import PinchZoomPan from "../../src/PinchZoomPan";
 
 function App() {
     return (
-        <div>
-            <h1>Demo</h1>
+        <div style={{ height: '100vh' }}>
+            <nav><h1>Demo</h1></nav>
             <div style={{ width: '500px', height: '500px' }}>
                 <PinchZoomPan>
                     <img alt='Demo Image' src='http://unsplash.it/750/750?random' />

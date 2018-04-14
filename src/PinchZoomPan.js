@@ -85,9 +85,9 @@ export default class PinchZoomPan extends React.Component {
             this.pinchChange(touches);
         }
         else if (touches.length === 1) {
-            this.pan(touches[0]);
-            if (this.state.top < 0) {
-                //suppress pull-down-refresh since there is room to pan up on the image
+            const swipingDown = this.pan(touches[0]) > 0;
+            if (swipingDown && this.state.top < 0) {
+                //suppress pull-down-refresh since swiping down will reveal the hidden overflow of the image
                 event.preventDefault();
             }
         }
@@ -160,9 +160,12 @@ export default class PinchZoomPan extends React.Component {
         const top = this.state.top + translateY;
         const left = this.state.left + translateX;
 
-        //prevent over-panning with 0 tolerance; over-panning doesn't look good
+        //use 0 tolerance to prevent over-panning (doesn't look good)
         this.move(top, left, 0)
         this.lastPanPointerPosition = pointerPosition;
+        return translateY > 0 ? 1 : //swiping down
+            translateY < 0 ? -1 : //swiping up
+                0;
     }
 
     pointerUp(timeStamp) {
