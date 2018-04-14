@@ -60,4 +60,4 @@ To set up the project:
 2.  `npm install`
 3.  `npm start`
 
-The example page will be available on http://localhost:3001 in watch mode, meaning you don't have refresh the page to see your changes.
+The example page will be available on http://localhost:3001 in watch mode, meaning you don't have to refresh the page to see your changes.

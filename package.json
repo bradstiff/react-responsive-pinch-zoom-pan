@@ -4,7 +4,7 @@
   "description": "Enables zooming and panning an image, both mobile and desktop.",
   "main": "dist/PinchZoomPan.js",
   "scripts": {
-    "start": "webpack-dev-server --mode development",
+    "start": "webpack-dev-server --mode development --host 0.0.0.0",
     "test": "echo \"Error: no test specified\" && exit 1",
     "transpile": "babel src -d dist --copy-files",
     "prepublishOnly": "npm run transpile",

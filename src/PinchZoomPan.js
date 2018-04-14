@@ -70,14 +70,10 @@ export default class PinchZoomPan extends React.Component {
         const touches = event.touches;
         if (touches.length === 2) {
             this.pinchStart(touches);
+            this.lastPanPointerPosition = null;
         }
         else if (touches.length === 1) {
             this.pointerDown(touches[0]);
-
-            if (this.state.top < 0) {
-                //suppress pull-down-refresh since there is room to pan up on the image
-                event.preventDefault();
-            }
         }
     }
 
@@ -90,6 +86,10 @@ export default class PinchZoomPan extends React.Component {
         }
         else if (touches.length === 1) {
             this.pan(touches[0]);
+            if (this.state.top < 0) {
+                //suppress pull-down-refresh since there is room to pan up on the image
+                event.preventDefault();
+            }
         }
     }
 
