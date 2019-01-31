@@ -1,20 +1,38 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-
-import { snapToTarget, invert, rangeBind, getDistanceBetweenPoints, getMidpoint, getRelativePosition } from './Utils';
-import { ZoomInButton, ZoomOutButton } from './ZoomButtons'
+import ZoomButtons from './ZoomButtons'
+import { snapToTarget, negate, constrain, getDistanceBetweenPoints, getMidpoint, getRelativePosition, setRef, isEqualDimensions, getDimensions, isEqualTransform, getMinScale } from './Utils';
 
 const SNAP_TOLERANCE = 0.001;
-const OVER_TRANSFORMATION_TOLERANCE = 0.05;
+const OVERZOOM_TOLERANCE = 0.05;
 const DOUBLE_TAP_THRESHOLD = 300;
 const ANIMATION_SPEED = 0.1;
 
+const containerStyle = { 
+    position: 'relative', 
+    overflow: 'hidden', 
+    width: '100%', 
+    height: '100%' 
+};
+
+//Ensure the image is not over-panned, and not over- or under-scaled.
+//These constraints must be checked when image changes, and when container is resized.
 export default class PinchZoomPan extends React.Component {
     state = {};
 
+    lastPointerUpTimeStamp; //enables detecting double-tap
+    lastPanPointerPosition;
+    lastPinchLength;
+    lastPinchMidpoint;
+    mouseDown;
+    animation;
+    container;
+    image;
+    isImageLoaded;
+
     //event handlers
     handleTouchStart = (event) => {
-        this.animation && cancelAnimationFrame(this.animation);
+        this.cancelAnimation();
 
         const touches = event.touches;
         if (touches.length === 2) {
@@ -47,7 +65,7 @@ export default class PinchZoomPan extends React.Component {
 
         //We allow transient +/-5% over-pinching.
         //Animate the bounce back to constraints if applicable.
-        this.ensureValidTransform(ANIMATION_SPEED);
+        this.maybeCorrectCurrentTransform(ANIMATION_SPEED);
 
         this.pointerUp(event.timeStamp);
 
@@ -56,7 +74,7 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleMouseDown = (event) => {
-        this.animation && cancelAnimationFrame(this.animation);
+        this.cancelAnimation();
         this.mouseDown = true;
         this.pointerDown(event);
     }
@@ -74,10 +92,10 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleMouseWheel = (event) => {
-        this.animation && cancelAnimationFrame(this.animation);
+        this.cancelAnimation();
         const point = getRelativePosition(event, this.container);
         if (event.deltaY > 0) {
-            if (this.state.scale > this.minScale) {
+            if (this.state.scale > getMinScale(this.state, this.props)) {
                 this.zoomOut(point);
                 event.preventDefault();
             }
@@ -89,11 +107,29 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    handleWindowResize = () => this.ensureConstraints();
-    handleImageLoad = () => this.ensureConstraints();
+    handleWindowResize = () => {console.log('handleWindowResize'); this.maybeHandleDimensionsChanged();}
+    handleImageLoad = () => {
+        console.log('handleImageLoad'); 
+        this.isImageLoaded = true;
+        this.maybeHandleDimensionsChanged();
+    }
+
     handleZoomInClick = () => this.zoomIn();
     handleZoomOutClick = () => this.zoomOut();
     suppressEvent = event => event.preventDefault();
+
+    handleRefImage = ref => {
+        if (this.image) {
+            this.cancelAnimation();
+            this.image.removeEventListener('touchmove', this.handleTouchMove);
+        }
+
+        this.image = ref;
+        this.image.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+
+        const { ref: imageRefProp } = React.Children.only(this.props.children);
+        setRef(imageRefProp, ref);
+    };
 
     //actions
     pointerDown(clientPosition) {
@@ -110,22 +146,25 @@ export default class PinchZoomPan extends React.Component {
         //use 0 tolerance to prevent over-panning (doesn't look good)
         this.move(top, left, 0)
         this.lastPanPointerPosition = pointerPosition;
-        return translateY > 0 ? 1 : //swiping down
-            translateY < 0 ? -1 : //swiping up
-                0;
+        return translateY > 0 ? 1 //swiping down
+            : translateY < 0 ? -1 //swiping up
+            : 0;
     }
 
     pointerUp(timeStamp) {
         if (this.lastPointerUpTimeStamp && this.lastPointerUpTimeStamp + DOUBLE_TAP_THRESHOLD > timeStamp) {
             //reset
-            this.transformToProps(ANIMATION_SPEED);
+            this.applyInitialTransform(ANIMATION_SPEED);
         }
 
         this.lastPointerUpTimeStamp = timeStamp;
     }
 
     move(top, left, tolerance, speed = 0) {
-        this.applyTransform(top, left, this.state.scale, tolerance, speed);
+        if (!this.isTransformInitialized) {
+            return;
+        }
+        this.constrainAndApplyTransform(top, left, this.state.scale, tolerance, speed);
     }
 
     pinchStart(touches) {
@@ -141,7 +180,7 @@ export default class PinchZoomPan extends React.Component {
         const scale = this.state.scale * length / this.lastPinchLength;
         const midpoint = getMidpoint(pointA, pointB);
 
-        this.zoom(scale, midpoint, OVER_TRANSFORMATION_TOLERANCE);
+        this.zoom(scale, midpoint, OVERZOOM_TOLERANCE);
 
         this.lastPinchMidpoint = midpoint;
         this.lastPinchLength = length;
@@ -163,8 +202,12 @@ export default class PinchZoomPan extends React.Component {
         this.zoom(this.state.scale * 0.95, midpoint, 0);
     }
 
-    zoom(scale, midpoint, tolerance, speed = 0) {
-        scale = this.getValidTransform(0, 0, scale, tolerance).scale;
+    zoom(requestedScale, midpoint, tolerance, speed = 0) {
+        if (!this.isTransformInitialized) {
+            return;
+        }
+
+        const scale = this.getConstrainedScale(requestedScale, tolerance);
 
         const incrementalScalePercentage = (this.state.scale - scale) / this.state.scale;
         const translateY = (midpoint.y - this.state.top) * incrementalScalePercentage;
@@ -173,19 +216,64 @@ export default class PinchZoomPan extends React.Component {
         const top = this.state.top + translateY;
         const left = this.state.left + translateX;
 
-        this.applyTransform(top, left, scale, tolerance, speed);
+        this.constrainAndApplyTransform(top, left, scale, tolerance, speed);
     }
 
-    //state validation and transformation methods
-    applyTransform(requestedTop, requestedLeft, requestedScale, tolerance, speed = 0) {
-        const { top, left, scale } = this.getValidTransform(requestedTop, requestedLeft, requestedScale, tolerance);
+    //compare stored dimensions to actual dimensions; capture actual dimensions if different
+    maybeHandleDimensionsChanged() {
+        if (this.isImageLoaded) {
+            const containerDimensions = getDimensions(this.container);
+            const imageDimensions = getDimensions(this.image);
 
-        if (this.state.scale === scale &&
-            this.state.top === top &&
-            this.state.left === left) {
-            return;
+            if (!isEqualDimensions(containerDimensions, getDimensions(this.state.containerDimensions)) || 
+                !isEqualDimensions(imageDimensions, getDimensions(this.state.imageDimensions))) {
+                this.cancelAnimation();
+
+                //capture new dimensions
+                this.setState({
+                        containerDimensions,
+                        imageDimensions
+                    }, 
+                    () => {
+                        //When image loads and image dimensions are first established, apply initial transform.
+                        //If dimensions change, constraints change; current transform may need to be adjusted.
+                        //Transforms depend on state, so wait until state is updated.
+                        if (!this.isTransformInitialized) {
+                            this.applyInitialTransform();
+                        } else {
+                            this.maybeCorrectCurrentTransform();
+                        }
+                    }
+                );
+                console.log(`Dimensions changed: Container: ${containerDimensions.offsetWidth}, ${containerDimensions.offsetHeight}, Image: ${imageDimensions.offsetWidth}, ${imageDimensions.offsetHeight}`);
+            }
         }
+        else {
+            console.log('Image not loaded');
+        }
+    }
 
+    //transformation methods
+
+    //Zooming and panning cause transform to be requested.
+    constrainAndApplyTransform(requestedTop, requestedLeft, requestedScale, tolerance, speed = 0) {
+        const requestedTransform = {
+            top: requestedTop,
+            left: requestedLeft,
+            scale: requestedScale
+        };
+        console.log(`Requesting transform: left ${requestedLeft}, top ${requestedTop}, scale ${requestedScale}`);
+
+        //Correct the transform if needed to prevent overpanning and overzooming
+        const transform = this.getCorrectedTransform(requestedTransform, tolerance) || requestedTransform;
+        console.log(`Applying transform: left ${transform.left}, top ${transform.top}, scale ${transform.scale}`);
+
+        if (! isEqualTransform(transform, this.state) ) {
+            this.applyTransform(transform, speed);
+        }
+    }
+
+    applyTransform({ top, left, scale }, speed) {
         if (speed > 0) {
             const frame = () => {
                 const translateY = top - this.state.top;
@@ -210,61 +298,72 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    getValidTransform(top, left, scale, tolerance) {
-        const transform = {
-            scale: scale || 1,
-            top: top || 0,
-            left: left || 0,
-        };
+    //Returns constrained scale when requested scale is outside min/max with tolerance, otherwise returns requested scale
+    getConstrainedScale(requestedScale, tolerance) {
         const lowerBoundFactor = 1.0 - tolerance;
         const upperBoundFactor = 1.0 + tolerance;
 
-        transform.scale = rangeBind(this.minScale * lowerBoundFactor,
+        return constrain(
+            getMinScale(this.state, this.props) * lowerBoundFactor,
             this.props.maxScale * upperBoundFactor,
-            transform.scale);
+            requestedScale
+        );
+    }
+
+    //Returns constrained transform when requested transform is outside constraints with tolerance, otherwise returns null
+    getCorrectedTransform(requestedTransform, tolerance) {
+        const scale = this.getConstrainedScale(requestedTransform.scale, tolerance);
 
         //get dimensions by which scaled image overflows container
-        const negativeSpace = this.calculateNegativeSpace(transform.scale);
+        const upperBoundFactor = 1.0 + tolerance;
+        const negativeSpace = this.calculateNegativeSpace(scale);
         const overflow = {
-            width: Math.max(0, invert(negativeSpace.width)),
-            height: Math.max(0, invert(negativeSpace.height)),
+            width: Math.max(0, negate(negativeSpace.width)),
+            height: Math.max(0, negate(negativeSpace.height)),
         };
 
         //prevent moving by more than the overflow
         //example: overflow.height = 100, tolerance = 0.05 => top is constrained between -105 and +5
-        transform.top = rangeBind(invert(overflow.height) * upperBoundFactor, overflow.height * upperBoundFactor - overflow.height, transform.top);
-        transform.left = rangeBind(invert(overflow.width) * upperBoundFactor, overflow.width * upperBoundFactor - overflow.width, transform.left);
+        const top = constrain(negate(overflow.height) * upperBoundFactor, overflow.height * upperBoundFactor - overflow.height, requestedTransform.top);
+        const left = constrain(negate(overflow.width) * upperBoundFactor, overflow.width * upperBoundFactor - overflow.width, requestedTransform.left);
 
-        return transform;
+        const constrainedTransform = {
+            top,
+            left,
+            scale
+        };
+
+        return isEqualTransform(constrainedTransform, requestedTransform)
+            ? null
+            : constrainedTransform;
     }
 
-    transformToProps(speed = 0) {
-        const scale = this.props.initialScale === 'auto' ? this.calculateAutofitScale() : this.props.initialScale;
-        this.applyTransform(this.props.initialTop, this.props.initialLeft, scale, 0, speed);
+    //Ensure current transform is within constraints
+    maybeCorrectCurrentTransform(speed = 0) {
+        let correctedTransform;
+        if (correctedTransform = this.getCorrectedTransform(this.state, 0)) {
+            this.applyTransform(correctedTransform, speed);
+        }
     }
 
-    ensureValidTransform(speed = 0) {
-        this.applyTransform(this.state.top, this.state.left, this.state.scale, 0, speed);
+    applyInitialTransform(speed = 0) {
+        this.constrainAndApplyTransform(this.props.initialTop, this.props.initialLeft, getMinScale(this.state, this.props), 0, speed);
     }
 
     //lifecycle methods
     render() {
         const childElement = React.Children.only(this.props.children);
-        const { ref: originalRef } = childElement;
-        const composedRef = element => {
-            this.image = element;
-            if (typeof originalRef === 'function') {
-                originalRef(element);
-            }
-        };
+        const { zoomButtons, maxScale } = this.props;
+        const { left, top, scale } = this.state;
         return (
-            <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '100%' }}>
-                {this.props.zoomButtons && (
-                    <div style={{ position: 'absolute', zIndex: 1000 }}>
-                        <ZoomOutButton onClick={this.handleZoomOutClick} disabled={this.state.scale <= this.minScale} />
-                        <ZoomInButton onClick={this.handleZoomInClick} disabled={this.state.scale >= this.props.maxScale} />
-                    </div>
-                )}
+            <div style={containerStyle}>
+                {zoomButtons && this.isImageLoaded && this.isTransformInitialized && <ZoomButtons 
+                    scale={scale} 
+                    minScale={getMinScale(this.state, this.props)} 
+                    maxScale={maxScale} 
+                    onZoomOutClick={this.handleZoomOutClick} 
+                    onZoomInClick={this.handleZoomInClick} 
+                />}
                 {React.cloneElement(childElement, {
                     onTouchStart: this.handleTouchStart,
                     onTouchEnd: this.handleTouchEnd,
@@ -274,10 +373,10 @@ export default class PinchZoomPan extends React.Component {
                     onWheel: this.handleMouseWheel,
                     onDragStart: this.suppressEvent,
                     onLoad: this.handleImageLoad,
-                    ref: composedRef,
+                    ref: this.handleRefImage,
                     style: {
                         cursor: 'pointer',
-                        transform: `translate3d(${this.state.left}px, ${this.state.top}px, 0) scale(${this.state.scale})`,
+                        transform: `translate3d(${left}px, ${top}px, 0) scale(${scale})`,
                         transformOrigin: '0 0',
                     },
                 })}
@@ -300,82 +399,46 @@ export default class PinchZoomPan extends React.Component {
     }
 
     componentDidMount() {
-        this.image.addEventListener('touchmove', this.handleTouchMove, { passive: false });
         window.addEventListener("resize", this.handleWindowResize);
 
         //Using the child image's original parent enables flex items, e.g., dimensions not explicitly set
         this.container = this.image.parentNode.parentNode; 
-        if (this.image.offsetWidth && this.image.offsetHeight) {
-            this.applyConstraints();
-            this.transformToProps();
-        }
+        console.log('componentDidMount');
+        this.maybeHandleDimensionsChanged();
     }
 
     componentDidUpdate(prevProps, prevState) {
-        if (this.image.offsetWidth && this.image.offsetHeight) {
-            this.ensureConstraints();
-            if (typeof this.state.scale === 'undefined') {
-                //reset to new props
-                this.transformToProps();
-            }
-        }
+        console.log('componentDidUpdate');
+        this.maybeHandleDimensionsChanged();
     }
 
     componentWillUnmount() {
+        this.cancelAnimation();
         this.image.removeEventListener('touchmove', this.handleTouchMove);
         window.removeEventListener('resize', this.handleWindowResize);
     }
 
-    //sizing methods
-    ensureConstraints() {
-        if (this.image.offsetWidth && this.image.offsetHeight) {
-            const negativeSpace = this.calculateNegativeSpace(1);
-            if (!this.lastUnzoomedNegativeSpace ||
-                negativeSpace.height !== this.lastUnzoomedNegativeSpace.height ||
-                negativeSpace.width !== this.lastUnzoomedNegativeSpace.width) {
-
-                //image and/or container dimensions have been set / updated
-                this.applyConstraints();
-                this.forceUpdate();
-            }
-        }
+    get isTransformInitialized() {
+        return this.state.scale !== undefined &&
+            this.state.left !== undefined && 
+            this.state.top !== undefined;
     }
 
-    applyConstraints() {
-        let minScale = 1;
-        if (this.props.minScale === 'auto') {
-            minScale = this.calculateAutofitScale();
-        } else {
-            minScale = this.props.minScale;
-        }
-
-        if (this.minScale !== minScale) {
-            this.minScale = minScale;
-            this.ensureValidTransform();
-        }
-
-        this.lastUnzoomedNegativeSpace = this.calculateNegativeSpace(1);
-    }
-
-    calculateNegativeSpace(scale = this.state.scale) {
+    calculateNegativeSpace(scale) {
         //get difference in dimension between container and scaled image
-        const width = this.container.offsetWidth - (scale * this.image.offsetWidth);
-        const height = this.container.offsetHeight - (scale * this.image.offsetHeight);
+        const { containerDimensions, imageDimensions } = this.state;
+        const width = containerDimensions.offsetWidth - (scale * imageDimensions.offsetWidth);
+        const height = containerDimensions.offsetHeight - (scale * imageDimensions.offsetHeight);
         return {
             width,
             height
         };
     }
 
-    calculateAutofitScale() {
-        let autofitScale = 1;
-        if (this.image.offsetWidth > 0) {
-            autofitScale = Math.min(this.container.offsetWidth / this.image.offsetWidth, autofitScale)
+    cancelAnimation() {
+        if (this.animation) {
+            cancelAnimationFrame(this.animation);
         }
-        if (this.image.offsetHeight > 0) {
-            autofitScale = Math.min(this.container.offsetHeight / this.image.offsetHeight, autofitScale);
-        }
-        return autofitScale;
     }
 }
 
