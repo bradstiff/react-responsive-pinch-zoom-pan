@@ -1,70 +1,19 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import FontAwesomeIcon from '@fortawesome/react-fontawesome';
-import faPlus from '@fortawesome/fontawesome-free-solid/faPlus';
-import faMinus from '@fortawesome/fontawesome-free-solid/faMinus';
-import './styles.css';
+
+import { snapToTarget, invert, rangeBind, getDistanceBetweenPoints, getMidpoint, getRelativePosition } from './Utils';
+import { ZoomInButton, ZoomOutButton } from './ZoomButtons'
 
 const SNAP_TOLERANCE = 0.001;
 const OVER_TRANSFORMATION_TOLERANCE = 0.05;
 const DOUBLE_TAP_THRESHOLD = 300;
 const ANIMATION_SPEED = 0.1;
 
-const snapToTarget = (value, target, tolerance) => {
-    const withinRange = Math.abs(target - value) < tolerance;
-    return withinRange ? target : value;
-};
-
-const rangeBind = (lowerBound, upperBound, value) => Math.min(upperBound, Math.max(lowerBound, value));
-
-const invert = (value) => value * -1;
-
-const getRelativePosition = ({ clientX, clientY }, relativeToElement) => {
-    const rect = relativeToElement.getBoundingClientRect();
-    return {
-        x: clientX - rect.left,
-        y: clientY - rect.top,
-    };
-};
-
-const getMidpoint = (pointA, pointB) => ({
-    x: (pointA.x + pointB.x) / 2,
-    y: (pointA.y + pointB.y) / 2,
-});
-
-const getDistanceBetweenPoints = (pointA, pointB) => (
-    Math.sqrt(Math.pow(pointA.y - pointB.y, 2) + Math.pow(pointA.x - pointB.x, 2))
-);
-
-const ZoomOutButton = ({ disabled, onClick }) => (
-    <button className='iconButton' style={{ margin: '10px' }} onClick={onClick} disabled={disabled}>
-        <FontAwesomeIcon icon={faMinus} />
-    </button>);
-
-const ZoomInButton = ({ disabled, onClick }) => (
-    <button className='iconButton' style={{ margin: '10px', marginLeft: '0px' }} onClick={onClick} disabled={disabled}>
-        <FontAwesomeIcon icon={faPlus} />
-    </button>);
-
 export default class PinchZoomPan extends React.Component {
-    constructor(props) {
-        super(props);
-
-        this.state = {};
-
-        this.handleTouchStart = this.handleTouchStart.bind(this);
-        this.handleTouchMove = this.handleTouchMove.bind(this);
-        this.handleTouchEnd = this.handleTouchEnd.bind(this);
-        this.handleMouseDown = this.handleMouseDown.bind(this);
-        this.handleMouseMove = this.handleMouseMove.bind(this);
-        this.handleMouseUp = this.handleMouseUp.bind(this);
-        this.handleMouseWheel = this.handleMouseWheel.bind(this);
-        this.handleWindowResize = this.handleWindowResize.bind(this);
-        this.handleImageLoad = this.handleImageLoad.bind(this);
-    }
+    state = {};
 
     //event handlers
-    handleTouchStart(event) {
+    handleTouchStart = (event) => {
         this.animation && cancelAnimationFrame(this.animation);
 
         const touches = event.touches;
@@ -77,7 +26,7 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    handleTouchMove(event) {
+    handleTouchMove = (event) => {
         const touches = event.touches;
         if (touches.length === 2) {
             //suppress viewport scaling
@@ -93,7 +42,7 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    handleTouchEnd(event) {
+    handleTouchEnd = (event) => {
         if (event.touches && event.touches.length > 0) return null;
 
         //We allow transient +/-5% over-pinching.
@@ -106,25 +55,25 @@ export default class PinchZoomPan extends React.Component {
         event.preventDefault();
     }
 
-    handleMouseDown(event) {
+    handleMouseDown = (event) => {
         this.animation && cancelAnimationFrame(this.animation);
         this.mouseDown = true;
         this.pointerDown(event);
     }
 
-    handleMouseMove(event) {
+    handleMouseMove = (event) => {
         if (!this.mouseDown) return null;
         this.pan(event)
     }
 
-    handleMouseUp(event) {
+    handleMouseUp = (event) => {
         this.pointerUp(event.timeStamp);
         if (this.mouseDown) {
             this.mouseDown = false;
         }
     }
 
-    handleMouseWheel(event) {
+    handleMouseWheel = (event) => {
         this.animation && cancelAnimationFrame(this.animation);
         const point = getRelativePosition(event, this.container);
         if (event.deltaY > 0) {
@@ -140,13 +89,11 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    handleWindowResize(event) {
-        this.ensureConstraints();
-    }
-
-    handleImageLoad() {
-        this.ensureConstraints();
-    }
+    handleWindowResize = () => this.ensureConstraints();
+    handleImageLoad = () => this.ensureConstraints();
+    handleZoomInClick = () => this.zoomIn();
+    handleZoomOutClick = () => this.zoomOut();
+    suppressEvent = event => event.preventDefault();
 
     //actions
     pointerDown(clientPosition) {
@@ -314,8 +261,8 @@ export default class PinchZoomPan extends React.Component {
             <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '100%' }}>
                 {this.props.zoomButtons && (
                     <div style={{ position: 'absolute', zIndex: 1000 }}>
-                        <ZoomOutButton onClick={() => this.zoomOut()} disabled={this.state.scale <= this.minScale} />
-                        <ZoomInButton onClick={() => this.zoomIn()} disabled={this.state.scale >= this.props.maxScale} />
+                        <ZoomOutButton onClick={this.handleZoomOutClick} disabled={this.state.scale <= this.minScale} />
+                        <ZoomInButton onClick={this.handleZoomInClick} disabled={this.state.scale >= this.props.maxScale} />
                     </div>
                 )}
                 {React.cloneElement(childElement, {
@@ -325,7 +272,7 @@ export default class PinchZoomPan extends React.Component {
                     onMouseMove: this.handleMouseMove,
                     onMouseUp: this.handleMouseUp,
                     onWheel: this.handleMouseWheel,
-                    onDragStart: event => event.preventDefault(),
+                    onDragStart: this.suppressEvent,
                     onLoad: this.handleImageLoad,
                     ref: composedRef,
                     style: {
