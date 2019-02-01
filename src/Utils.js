@@ -17,13 +17,13 @@ export const getRelativePosition = ({ clientX, clientY }, relativeToElement) => 
     };
 };
 
-export const getMidpoint = (pointA, pointB) => ({
-    x: (pointA.x + pointB.x) / 2,
-    y: (pointA.y + pointB.y) / 2,
+export const getPinchMidpoint = ([touch1, touch2]) => ({
+    x: (touch1.clientX + touch2.clientX) / 2,
+    y: (touch1.clientY + touch2.clientY) / 2,
 });
 
-export const getDistanceBetweenPoints = (pointA, pointB) => (
-    Math.sqrt(Math.pow(pointA.y - pointB.y, 2) + Math.pow(pointA.x - pointB.x, 2))
+export const getPinchLength = ([touch1, touch2]) => (
+    Math.sqrt(Math.pow(touch1.clientY - touch2.clientY, 2) + Math.pow(touch1.clientX - touch2.clientX, 2))
 );
 
 export function setRef(ref, value) {
@@ -41,8 +41,8 @@ export const isEqualDimensions = (dimensions1, dimensions2) => {
     if (dimensions1 === undefined || dimensions2 === undefined) {
         return false;
     }
-    return dimensions1.offsetWidth === dimensions2.offsetWidth &&
-        dimensions1.offsetHeight === dimensions2.offsetHeight;
+    return dimensions1.width === dimensions2.width &&
+        dimensions1.height === dimensions2.height;
 }
 
 export const getDimensions = object => {
@@ -50,8 +50,15 @@ export const getDimensions = object => {
         return undefined;
     }
     return {
-        offsetWidth: object.offsetWidth,
-        offsetHeight: object.offsetHeight,
+        width: object.width,
+        height: object.height,
+    };
+}
+
+export const getContainerDimensions = image => {
+    return {
+        width: image.parentNode.offsetWidth,
+        height: image.parentNode.offsetHeight,
     };
 }
 
@@ -68,13 +75,13 @@ export const isEqualTransform = (transform1, transform2) => {
 }
 
 const calculateAutofitScale = (containerDimensions, imageDimensions) => {
-    const { offsetWidth: imageWidth, offsetHeight: imageHeight } = imageDimensions || {};
+    const { width: imageWidth, height: imageHeight } = imageDimensions || {};
     if (! (imageWidth > 0 && imageHeight > 0) ) {
         return 1;
     }
     return Math.min(
-        containerDimensions.offsetWidth / imageWidth,
-        containerDimensions.offsetHeight / imageHeight,
+        containerDimensions.width / imageWidth,
+        containerDimensions.height / imageHeight,
         1
     );
 }
@@ -89,7 +96,6 @@ export const getMinScale = createSelector(
             : minScaleProp || 1
 )
 
-
 function round(number, precision) {
     if (precision && number !== null && number !== undefined) {
       // Shift with exponential notation to avoid floating-point issues.
@@ -102,3 +108,9 @@ function round(number, precision) {
     }
     return Math.round(number);
 };
+
+export function debug(message) {
+    if (process.env.NODE_ENV !== 'production') {    
+        console.log(message);
+    }
+}

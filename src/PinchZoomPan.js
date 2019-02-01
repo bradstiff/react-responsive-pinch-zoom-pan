@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import ZoomButtons from './ZoomButtons'
-import { snapToTarget, negate, constrain, getDistanceBetweenPoints, getMidpoint, getRelativePosition, setRef, isEqualDimensions, getDimensions, isEqualTransform, getMinScale } from './Utils';
+import { snapToTarget, negate, constrain, getPinchLength, getPinchMidpoint, getRelativePosition, setRef, isEqualDimensions, getDimensions, getContainerDimensions, isEqualTransform, getMinScale, debug } from './Utils';
 
 const SNAP_TOLERANCE = 0.001;
 const OVERZOOM_TOLERANCE = 0.05;
@@ -26,9 +26,8 @@ export default class PinchZoomPan extends React.Component {
     lastPinchMidpoint;
     mouseDown;
     animation;
-    container;
     image;
-    isImageLoaded;
+    isImageLoaded; //permits initial transform
 
     //event handlers
     handleTouchStart = (event) => {
@@ -93,7 +92,7 @@ export default class PinchZoomPan extends React.Component {
 
     handleMouseWheel = (event) => {
         this.cancelAnimation();
-        const point = getRelativePosition(event, this.container);
+        const point = getRelativePosition(event, this.image.parentNode);
         if (event.deltaY > 0) {
             if (this.state.scale > getMinScale(this.state, this.props)) {
                 this.zoomOut(point);
@@ -107,13 +106,18 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    handleWindowResize = () => {console.log('handleWindowResize'); this.maybeHandleDimensionsChanged();}
-    handleImageLoad = () => {
-        console.log('handleImageLoad'); 
+    handleImageLoad = event => {
+        debug('handleImageLoad'); 
         this.isImageLoaded = true;
         this.maybeHandleDimensionsChanged();
+
+        const { onLoad } = React.Children.only(this.props.children);
+        if (typeof onLoad === 'function') {
+            onLoad(event);
+        }
     }
 
+    handleWindowResize = () => this.maybeHandleDimensionsChanged();
     handleZoomInClick = () => this.zoomIn();
     handleZoomOutClick = () => this.zoomOut();
     suppressEvent = event => event.preventDefault();
@@ -125,7 +129,9 @@ export default class PinchZoomPan extends React.Component {
         }
 
         this.image = ref;
-        this.image.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+        if (ref) {
+            this.image.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+        }
 
         const { ref: imageRefProp } = React.Children.only(this.props.children);
         setRef(imageRefProp, ref);
@@ -133,11 +139,11 @@ export default class PinchZoomPan extends React.Component {
 
     //actions
     pointerDown(clientPosition) {
-        this.lastPanPointerPosition = getRelativePosition(clientPosition, this.container);
+        this.lastPanPointerPosition = getRelativePosition(clientPosition, this.image.parentNode);
     }
 
     pan(pointerClientPosition) {
-        const pointerPosition = getRelativePosition(pointerClientPosition, this.container);
+        const pointerPosition = getRelativePosition(pointerClientPosition, this.image.parentNode);
         const translateX = pointerPosition.x - this.lastPanPointerPosition.x;
         const translateY = pointerPosition.y - this.lastPanPointerPosition.y;
         const top = this.state.top + translateY;
@@ -168,17 +174,13 @@ export default class PinchZoomPan extends React.Component {
     }
 
     pinchStart(touches) {
-        const pointA = getRelativePosition(touches[0], this.container);
-        const pointB = getRelativePosition(touches[1], this.container);
-        this.lastPinchLength = getDistanceBetweenPoints(pointA, pointB);
+        this.lastPinchLength = getPinchLength(touches);
     }
 
     pinchChange(touches) {
-        const pointA = getRelativePosition(touches[0], this.container);
-        const pointB = getRelativePosition(touches[1], this.container);
-        const length = getDistanceBetweenPoints(pointA, pointB);
+        const length = getPinchLength(touches);
+        const midpoint = getPinchMidpoint(touches);
         const scale = this.state.scale * length / this.lastPinchLength;
-        const midpoint = getMidpoint(pointA, pointB);
 
         this.zoom(scale, midpoint, OVERZOOM_TOLERANCE);
 
@@ -188,16 +190,16 @@ export default class PinchZoomPan extends React.Component {
 
     zoomIn(midpoint) {
         midpoint = midpoint || {
-            x: this.container.offsetWidth / 2,
-            y: this.container.offsetHeight / 2
+            x: this.state.containerDimensions.width / 2,
+            y: this.state.containerDimensions.height / 2
         };
         this.zoom(this.state.scale * 1.05, midpoint, 0);
     }
 
     zoomOut(midpoint) {
         midpoint = midpoint || {
-            x: this.container.offsetWidth / 2,
-            y: this.container.offsetHeight / 2
+            x: this.state.containerDimensions.width / 2,
+            y: this.state.containerDimensions.height / 2
         };
         this.zoom(this.state.scale * 0.95, midpoint, 0);
     }
@@ -222,7 +224,7 @@ export default class PinchZoomPan extends React.Component {
     //compare stored dimensions to actual dimensions; capture actual dimensions if different
     maybeHandleDimensionsChanged() {
         if (this.isImageLoaded) {
-            const containerDimensions = getDimensions(this.container);
+            const containerDimensions = getContainerDimensions(this.image);
             const imageDimensions = getDimensions(this.image);
 
             if (!isEqualDimensions(containerDimensions, getDimensions(this.state.containerDimensions)) || 
@@ -245,11 +247,11 @@ export default class PinchZoomPan extends React.Component {
                         }
                     }
                 );
-                console.log(`Dimensions changed: Container: ${containerDimensions.offsetWidth}, ${containerDimensions.offsetHeight}, Image: ${imageDimensions.offsetWidth}, ${imageDimensions.offsetHeight}`);
+                debug(`Dimensions changed: Container: ${containerDimensions.width}, ${containerDimensions.height}, Image: ${imageDimensions.width}, ${imageDimensions.height}`);
             }
         }
         else {
-            console.log('Image not loaded');
+            debug('Image not loaded');
         }
     }
 
@@ -262,11 +264,11 @@ export default class PinchZoomPan extends React.Component {
             left: requestedLeft,
             scale: requestedScale
         };
-        console.log(`Requesting transform: left ${requestedLeft}, top ${requestedTop}, scale ${requestedScale}`);
+        debug(`Requesting transform: left ${requestedLeft}, top ${requestedTop}, scale ${requestedScale}`);
 
         //Correct the transform if needed to prevent overpanning and overzooming
         const transform = this.getCorrectedTransform(requestedTransform, tolerance) || requestedTransform;
-        console.log(`Applying transform: left ${transform.left}, top ${transform.top}, scale ${transform.scale}`);
+        debug(`Applying transform: left ${transform.left}, top ${transform.top}, scale ${transform.scale}`);
 
         if (! isEqualTransform(transform, this.state) ) {
             this.applyTransform(transform, speed);
@@ -354,7 +356,7 @@ export default class PinchZoomPan extends React.Component {
     render() {
         const childElement = React.Children.only(this.props.children);
         const { zoomButtons, maxScale } = this.props;
-        const { left, top, scale } = this.state;
+        const { top, left, scale } = this.state;
         return (
             <div style={containerStyle}>
                 {zoomButtons && this.isImageLoaded && this.isTransformInitialized && <ZoomButtons 
@@ -374,11 +376,14 @@ export default class PinchZoomPan extends React.Component {
                     onDragStart: this.suppressEvent,
                     onLoad: this.handleImageLoad,
                     ref: this.handleRefImage,
-                    style: {
-                        cursor: 'pointer',
-                        transform: `translate3d(${left}px, ${top}px, 0) scale(${scale})`,
-                        transformOrigin: '0 0',
-                    },
+                    style: this.isTransformInitialized 
+                        ? {
+                            cursor: 'pointer',
+                            transform: `translate3d(${left}px, ${top}px, 0) scale(${scale})`,
+                            transformOrigin: '0 0',
+                        } : {
+                            cursor: 'pointer'
+                        }
                 })}
             </div>
         );
@@ -400,15 +405,10 @@ export default class PinchZoomPan extends React.Component {
 
     componentDidMount() {
         window.addEventListener("resize", this.handleWindowResize);
-
-        //Using the child image's original parent enables flex items, e.g., dimensions not explicitly set
-        this.container = this.image.parentNode.parentNode; 
-        console.log('componentDidMount');
         this.maybeHandleDimensionsChanged();
     }
 
     componentDidUpdate(prevProps, prevState) {
-        console.log('componentDidUpdate');
         this.maybeHandleDimensionsChanged();
     }
 
@@ -427,8 +427,8 @@ export default class PinchZoomPan extends React.Component {
     calculateNegativeSpace(scale) {
         //get difference in dimension between container and scaled image
         const { containerDimensions, imageDimensions } = this.state;
-        const width = containerDimensions.offsetWidth - (scale * imageDimensions.offsetWidth);
-        const height = containerDimensions.offsetHeight - (scale * imageDimensions.offsetHeight);
+        const width = containerDimensions.width - (scale * imageDimensions.width);
+        const height = containerDimensions.height - (scale * imageDimensions.height);
         return {
             width,
             height

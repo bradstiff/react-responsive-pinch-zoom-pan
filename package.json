@@ -5,7 +5,7 @@
   "main": "dist/PinchZoomPan.js",
   "scripts": {
     "start": "webpack-dev-server --mode development --host 0.0.0.0",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "transpile": "babel src -d dist --copy-files",
     "prepublishOnly": "npm run transpile",
     "build": "webpack --mode production",
@@ -18,32 +18,34 @@
     "responsive",
     "pinch",
     "zoom",
-    "pan"
+    "pan",
+    "image"
   ],
   "license": "MIT",
   "peerDependencies": {
-    "react": "^16.4.2",
-    "react-dom": "^16.4.2"
+    "react": "^16.3.0",
+    "react-dom": "^16.3.0"
   },
   "devDependencies": {
-    "@babel/cli": "^7.0.0",
-    "@babel/core": "^7.0.0",
-    "@babel/plugin-proposal-class-properties": "^7.0.0",
-    "@babel/preset-env": "^7.0.0",
+    "@babel/core": "7.1.6",
+    "@babel/plugin-proposal-class-properties": "^7.3.0",
+    "@babel/preset-env": "^7.3.1",
     "@babel/preset-react": "^7.0.0",
-    "babel-core": "^7.0.0-bridge.0",
-    "babel-jest": "^23.4.2",
-    "babel-loader": "^8.0.1",
-    "css-loader": "^0.28.11",
+    "babel-core": "7.0.0-bridge.0",
+    "babel-jest": "23.6.0",
+    "babel-loader": "8.0.4",
+    "css-loader": "1.0.0",
+    "file-loader": "2.0.0",
     "gh-pages": "^1.2.0",
-    "html-webpack-plugin": "^3.2.0",
-    "react": "^16.4.2",
-    "react-dom": "^16.4.2",
-    "regenerator-runtime": "^0.12.1",
-    "style-loader": "^0.23.0",
-    "webpack": "^4.17.1",
-    "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.7"
+    "html-webpack-plugin": "4.0.0-alpha.2",
+    "jest": "23.6.0",
+    "react": "^16.7.0",
+    "react-dom": "^16.7.0",
+    "style-loader": "0.23.0",
+    "url-loader": "1.1.1",
+    "webpack": "4.19.1",
+    "webpack-cli": "^3.2.1",
+    "webpack-dev-server": "3.1.14"
   },
   "author": "Brad Stiff",
   "homepage": "https://github.com/bradstiff/react-responsive-pinch-zoom-pan",
@@ -52,9 +54,34 @@
     "url": "git@github.com:bradstiff/react-responsive-pinch-zoom-pan.git"
   },
   "dependencies": {
-    "@fortawesome/fontawesome": "^1.1.8",
-    "@fortawesome/fontawesome-free-solid": "^5.0.13",
-    "@fortawesome/react-fontawesome": "0.0.18",
+    "@fortawesome/fontawesome-svg-core": "^1.2.13",
+    "@fortawesome/free-solid-svg-icons": "^5.7.0",
+    "@fortawesome/react-fontawesome": "^0.1.4",
     "reselect": "^4.0.0"
+  },
+  "jest": {
+    "testMatch": [
+      "<rootDir>/tests/**/*.{js,jsx,ts,tsx}"
+    ],
+    "testEnvironment": "jsdom",
+    "transform": {
+      "^.+\\.(js|jsx|ts|tsx)$": "<rootDir>/node_modules/babel-jest"
+    },
+    "transformIgnorePatterns": [
+      "[/\\\\]node_modules[/\\\\].+\\.(js|jsx|ts|tsx)$",
+      "^.+\\.module\\.(css|sass|scss)$"
+    ],
+    "moduleFileExtensions": [
+      "js"
+    ]
+  },
+  "babel": {
+    "presets": [
+      "@babel/env",
+      "@babel/react"
+    ],
+    "plugins": [
+      "@babel/plugin-proposal-class-properties"
+    ]
   }
 }
