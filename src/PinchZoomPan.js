@@ -9,8 +9,6 @@ const DOUBLE_TAP_THRESHOLD = 300;
 const ANIMATION_SPEED = 0.1;
 
 const containerStyle = { 
-    position: 'relative', 
-    overflow: 'hidden', 
     width: '100%', 
     height: '100%' 
 };
@@ -223,7 +221,7 @@ export default class PinchZoomPan extends React.Component {
 
     //compare stored dimensions to actual dimensions; capture actual dimensions if different
     maybeHandleDimensionsChanged() {
-        if (this.isImageLoaded) {
+        if (this.isImageReady) {
             const containerDimensions = getContainerDimensions(this.image);
             const imageDimensions = getDimensions(this.image);
 
@@ -359,7 +357,7 @@ export default class PinchZoomPan extends React.Component {
         const { top, left, scale } = this.state;
         return (
             <div style={containerStyle}>
-                {zoomButtons && this.isImageLoaded && this.isTransformInitialized && <ZoomButtons 
+                {zoomButtons && this.isImageReady && this.isTransformInitialized && <ZoomButtons 
                     scale={scale} 
                     minScale={getMinScale(this.state, this.props)} 
                     maxScale={maxScale} 
@@ -418,6 +416,10 @@ export default class PinchZoomPan extends React.Component {
         window.removeEventListener('resize', this.handleWindowResize);
     }
 
+    get isImageReady() {
+        return this.isImageLoaded || (this.image && this.image.tagName !== 'IMG');
+    }
+
     get isTransformInitialized() {
         return this.state.scale !== undefined &&
             this.state.left !== undefined && 
@@ -452,5 +454,17 @@ PinchZoomPan.defaultProps = {
 };
 
 PinchZoomPan.propTypes = {
-    children: PropTypes.element.isRequired
+    children: PropTypes.element.isRequired,
+    initialTop: PropTypes.number,
+    initialLeft: PropTypes.number,
+    initialScale: PropTypes.oneOfType([
+        PropTypes.number,
+        PropTypes.string
+    ]),
+    minScale: PropTypes.oneOfType([
+        PropTypes.number,
+        PropTypes.string
+    ]),
+    maxScale: PropTypes.number,
+    zoomButtons: PropTypes.bool,
 };
