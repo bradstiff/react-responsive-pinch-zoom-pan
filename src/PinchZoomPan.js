@@ -27,6 +27,8 @@ export default class PinchZoomPan extends React.Component {
     animation;
     image;
     isImageLoaded; //permits initial transform
+    shouldHandlePullDownRefresh;
+    originalOverscrollBehaviorY;
 
     //event handlers
     handleTouchStart = (event) => {
@@ -45,16 +47,10 @@ export default class PinchZoomPan extends React.Component {
     handleTouchMove = (event) => {
         const touches = event.touches;
         if (touches.length === 2) {
-            //suppress viewport scaling
-            event.preventDefault();
             this.pinchChange(touches);
         }
         else if (touches.length === 1) {
-            const swipingDown = this.pan(touches[0]) > 0;
-            if (swipingDown && this.state.top < 0) {
-                //suppress pull-down-refresh since swiping down will reveal the hidden overflow of the image
-                event.preventDefault();
-            }
+            this.pan(touches[0]) > 0;
         }
     }
 
@@ -69,7 +65,7 @@ export default class PinchZoomPan extends React.Component {
         this.pointerUp(event.timeStamp);
 
         //suppress mouseUp, in case of tap
-        event.preventDefault();
+        this.cancelEvent(event);
     }
 
     handleMouseDown = (event) => {
@@ -97,12 +93,12 @@ export default class PinchZoomPan extends React.Component {
         if (event.deltaY > 0) {
             if (this.state.scale > getMinScale(this.state, this.props)) {
                 this.zoomOut(point);
-                event.preventDefault();
+                this.cancelEvent(event);
             }
         } else if (event.deltaY < 0) {
             if (this.state.scale < this.props.maxScale) {
                 this.zoomIn(point);
-                event.preventDefault();
+                this.cancelEvent(event);
             }
         }
     }
@@ -129,7 +125,12 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleWindowResize = () => this.maybeHandleDimensionsChanged();
-    suppressEvent = event => event.preventDefault();
+    
+    cancelEvent = event => {
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+    }
 
     handleRefImage = ref => {
         if (this.image) {
@@ -383,6 +384,17 @@ export default class PinchZoomPan extends React.Component {
         const childElement = React.Children.only(this.props.children);
         const { zoomButtons, maxScale } = this.props;
         const { top, left, scale } = this.state;
+        
+        const transformStyle = this.isTransformInitialized && {
+                transform: `translate3d(${left}px, ${top}px, 0) scale(${scale})`,
+                transformOrigin: '0 0',
+        };
+
+        const style = {
+            cursor: 'pointer',
+            ...transformStyle
+        };
+        
         return (
             <div style={containerStyle}>
                 {zoomButtons && this.isImageReady && this.isTransformInitialized && <ZoomButtons 
@@ -399,17 +411,10 @@ export default class PinchZoomPan extends React.Component {
                     onMouseMove: this.handleMouseMove,
                     onMouseUp: this.handleMouseUp,
                     onWheel: this.handleMouseWheel,
-                    onDragStart: this.suppressEvent,
+                    onDragStart: this.cancelEvent,
                     onLoad: this.handleImageLoad,
                     ref: this.handleRefImage,
-                    style: this.isTransformInitialized 
-                        ? {
-                            cursor: 'pointer',
-                            transform: `translate3d(${left}px, ${top}px, 0) scale(${scale})`,
-                            transformOrigin: '0 0',
-                        } : {
-                            cursor: 'pointer'
-                        }
+                    style: style
                 })}
             </div>
         );
@@ -432,10 +437,13 @@ export default class PinchZoomPan extends React.Component {
     componentDidMount() {
         window.addEventListener("resize", this.handleWindowResize);
         this.maybeHandleDimensionsChanged();
+        this.initShouldHandlePullDownRefresh();
+        this.maybePreventPullDownRefresh();
     }
 
     componentDidUpdate(prevProps, prevState) {
         this.maybeHandleDimensionsChanged();
+        this.maybePreventPullDownRefresh();
     }
 
     componentWillUnmount() {
@@ -452,6 +460,33 @@ export default class PinchZoomPan extends React.Component {
         return this.state.scale !== undefined &&
             this.state.left !== undefined && 
             this.state.top !== undefined;
+    }
+
+    initShouldHandlePullDownRefresh() {
+        try {
+            const isChrome = window.chrome || navigator.userAgent.match('CriOS');
+            const isTouch = 'ontouchstart' in document.documentElement;
+            const supportsOverscroll = CSS.supports('overscroll-behavior-y', 'none');
+            this.shouldHandlePullDownRefresh = isChrome && isTouch && supportsOverscroll;
+        } catch (e) {
+            this.shouldHandlePullDownRefresh = false;
+        }
+    }
+
+    maybePreventPullDownRefresh() {
+        if (!this.shouldHandlePullDownRefresh) {
+            return;
+        }
+        const overscrollBehaviorY = document.body.style.overscrollBehaviorY;
+        if (this.state.top < 0 && overscrollBehaviorY != 'none' && overscrollBehaviorY != 'contain' ) {
+            //disable pull down refresh so user can scroll image
+            this.originalOverscrollBehaviorY = overscrollBehaviorY;
+            document.body.style.overscrollBehaviorY = 'none';
+        } else if (this.state.top === 0 && overscrollBehaviorY === 'none' && this.originalOverscrollBehaviorY !== undefined) {
+            //restore original value
+            document.body.style.overscrollBehaviorY = this.originalOverscrollBehaviorY;
+            this.originalOverscrollBehaviorY = undefined;
+        }
     }
 
     calculateNegativeSpace(scale) {

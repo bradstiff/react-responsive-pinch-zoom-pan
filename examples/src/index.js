@@ -20,15 +20,16 @@ const flexContentStyle = {
 const FlexContainerView = ({menu}) => (
     <div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
         <nav style={{flex: 'none'}}>{menu}</nav>
-        <div style={{flex: 'none', textAlign: 'center'}}><span style={flexContentStyle}>The image container dimensions are dynamic based on CSS Flex</span></div>
+        <div style={{flex: 'none', textAlign: 'center'}}><span style={flexContentStyle}>The image fills 100% of the flex item in which it is</span></div>
         <main style={{flex: 'auto', overflow: 'hidden', display: 'flex'}}>
             <div style={{flex: 'none', alignSelf: 'center'}}>
                 <span style={flexContentStyle}>Sidebar</span>
             </div>
-            <div style={{flex: 'auto', overflow: 'hidden'}}>
+            <div style={{flex: 'auto', overflow: 'hidden', position: 'relative'}}>
+                <div style={{position: 'absolute', height: '100%', width: '100%'}}>
                 <PinchZoomPan>
                     <img alt='Demo Image' src='http://picsum.photos/2560/1440?random' />
-                </PinchZoomPan>
+                </PinchZoomPan></div>
             </div>
         </main>
     </div>
