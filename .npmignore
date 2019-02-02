@@ -5,4 +5,5 @@ examples
 .gitignore
 .prettierignore
 .vs
+.vscode
 webpack.config.js

@@ -6,7 +6,7 @@ const ExplicitContainerView = ({menu}) => (
     <div>
         <nav>{menu}</nav>
         <main style={{ width: '500px', height: '500px' }}>
-            <PinchZoomPan>
+            <PinchZoomPan doubleTapBehavior='zoom'>
                 <img alt='Demo Image' src='http://picsum.photos/1000/1000?random' />
             </PinchZoomPan>
         </main>

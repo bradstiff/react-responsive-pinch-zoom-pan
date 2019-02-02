@@ -91,7 +91,7 @@ export const getMinScale = createSelector(
     state => state.imageDimensions,
     (state, props) => props.minScale,
     (containerDimensions, imageDimensions, minScaleProp) => 
-        minScaleProp === 'auto'
+        String(minScaleProp).toLowerCase() === 'auto'
             ? calculateAutofitScale(containerDimensions, imageDimensions)
             : minScaleProp || 1
 )

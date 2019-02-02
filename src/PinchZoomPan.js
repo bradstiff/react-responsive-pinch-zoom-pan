@@ -60,6 +60,7 @@ export default class PinchZoomPan extends React.Component {
 
     handleTouchEnd = (event) => {
         if (event.touches && event.touches.length > 0) return null;
+        this.cancelAnimation();
 
         //We allow transient +/-5% over-pinching.
         //Animate the bounce back to constraints if applicable.
@@ -83,6 +84,7 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleMouseUp = (event) => {
+        this.cancelAnimation();
         this.pointerUp(event.timeStamp);
         if (this.mouseDown) {
             this.mouseDown = false;
@@ -116,9 +118,17 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
+    handleZoomInClick = () => {
+        this.cancelAnimation();
+        this.zoomIn();
+    }
+
+    handleZoomOutClick = () => {
+        this.cancelAnimation();
+        this.zoomOut();
+    }
+
     handleWindowResize = () => this.maybeHandleDimensionsChanged();
-    handleZoomInClick = () => this.zoomIn();
-    handleZoomOutClick = () => this.zoomOut();
     suppressEvent = event => event.preventDefault();
 
     handleRefImage = ref => {
@@ -164,11 +174,19 @@ export default class PinchZoomPan extends React.Component {
 
     pointerUp(timeStamp) {
         if (this.lastPointerUpTimeStamp && this.lastPointerUpTimeStamp + DOUBLE_TAP_THRESHOLD > timeStamp) {
-            //reset
-            this.applyInitialTransform(ANIMATION_SPEED);
+            this.doubleTap(this.lastPanPointerPosition);
         }
 
         this.lastPointerUpTimeStamp = timeStamp;
+    }
+
+    doubleTap(pointerPosition) {
+        if (String(this.props.doubleTapBehavior).toLowerCase() === 'zoom' && this.state.scale * (1 + OVERZOOM_TOLERANCE) < this.props.maxScale) {
+            this.zoomIn(pointerPosition, ANIMATION_SPEED, 0.3);
+        } else {
+            //reset
+            this.applyInitialTransform(ANIMATION_SPEED);
+        }
     }
 
     move(top, left, tolerance, speed = 0) {
@@ -193,12 +211,12 @@ export default class PinchZoomPan extends React.Component {
         this.lastPinchLength = length;
     }
 
-    zoomIn(midpoint) {
+    zoomIn(midpoint, speed = 0, factor = 0.05) {
         midpoint = midpoint || {
             x: this.state.containerDimensions.width / 2,
             y: this.state.containerDimensions.height / 2
         };
-        this.zoom(this.state.scale * 1.05, midpoint, 0);
+        this.zoom(this.state.scale * (1 + factor), midpoint, 0, speed);
     }
 
     zoomOut(midpoint) {
@@ -293,7 +311,10 @@ export default class PinchZoomPan extends React.Component {
                     scale: snapToTarget(this.state.scale + (speed * translateScale), scale, SNAP_TOLERANCE),
                 };
 
-                this.setState(nextTransform, () => this.animation = requestAnimationFrame(frame));
+                //animation runs until we reach the target
+                if (!isEqualTransform(nextTransform, this.state)) {
+                    this.setState(nextTransform, () => this.animation = requestAnimationFrame(frame));
+                }
             };
             this.animation = requestAnimationFrame(frame);
         } else {
@@ -458,6 +479,7 @@ PinchZoomPan.defaultProps = {
     minScale: 'auto',
     maxScale: 1,
     zoomButtons: true,
+    doubleTapBehavior: 'reset'
 };
 
 PinchZoomPan.propTypes = {
@@ -474,4 +496,5 @@ PinchZoomPan.propTypes = {
     ]),
     maxScale: PropTypes.number,
     zoomButtons: PropTypes.bool,
+    doubleTapBehavior: PropTypes.oneOf(['reset', 'zoom']),
 };
