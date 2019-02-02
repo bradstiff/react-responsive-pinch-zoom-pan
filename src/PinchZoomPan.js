@@ -10,7 +10,8 @@ const ANIMATION_SPEED = 0.1;
 
 const containerStyle = { 
     width: '100%', 
-    height: '100%' 
+    height: '100%',
+    overflow: 'hidden'
 };
 
 //Ensure the image is not over-panned, and not over- or under-scaled.
@@ -62,7 +63,7 @@ export default class PinchZoomPan extends React.Component {
 
         //We allow transient +/-5% over-pinching.
         //Animate the bounce back to constraints if applicable.
-        this.maybeCorrectCurrentTransform(ANIMATION_SPEED);
+        this.maybeAdjustCurrentTransform(ANIMATION_SPEED);
 
         this.pointerUp(event.timeStamp);
 
@@ -241,7 +242,7 @@ export default class PinchZoomPan extends React.Component {
                         if (!this.isTransformInitialized) {
                             this.applyInitialTransform();
                         } else {
-                            this.maybeCorrectCurrentTransform();
+                            this.maybeAdjustCurrentTransform();
                         }
                     }
                 );
@@ -339,7 +340,7 @@ export default class PinchZoomPan extends React.Component {
     }
 
     //Ensure current transform is within constraints
-    maybeCorrectCurrentTransform(speed = 0) {
+    maybeAdjustCurrentTransform(speed = 0) {
         let correctedTransform;
         if (correctedTransform = this.getCorrectedTransform(this.state, 0)) {
             this.applyTransform(correctedTransform, speed);

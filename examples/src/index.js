@@ -47,7 +47,7 @@ const Menu = ({viewId, onViewChange}) => {
     return (
         <React.Fragment>
             <span style={{fontSize: 20, fontWeight: 'bold', padding: 10}}>Demo</span>
-            <a href='#' onClick={() => onViewChange(0)} style={getLinkStyle(0)}>Static Sizing</a>
+            <a href='#' onClick={() => onViewChange(0)} style={getLinkStyle(0)}>Explicit Sizing</a>
             <a href='#' onClick={() => onViewChange(1)} style={getLinkStyle(1)}>Flex Sizing</a>
         </React.Fragment>
     );

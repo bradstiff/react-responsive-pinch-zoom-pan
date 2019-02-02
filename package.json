@@ -37,7 +37,7 @@
     "babel-loader": "8.0.4",
     "css-loader": "1.0.0",
     "file-loader": "2.0.0",
-    "gh-pages": "^1.2.0",
+    "gh-pages": "^2.0.1",
     "html-webpack-plugin": "4.0.0-alpha.2",
     "jest": "23.6.0",
     "react": "^16.7.0",
