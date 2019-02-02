@@ -2,7 +2,7 @@ import React from "react";
 import { render } from "react-dom";
 import PinchZoomPan from "../../src/PinchZoomPan";
 
-const StaticContainerView = ({menu}) => (
+const ExplicitContainerView = ({menu}) => (
     <div>
         <nav>{menu}</nav>
         <main style={{ width: '500px', height: '500px' }}>
@@ -69,7 +69,7 @@ class App extends React.Component {
         const menu = <Menu viewId={viewId} onViewChange={this.handleViewChange} />
         return viewId === 1 
             ? <FlexContainerView menu={menu} />
-            : <StaticContainerView menu={menu} />;
+            : <ExplicitContainerView menu={menu} />;
     }
 }
 
