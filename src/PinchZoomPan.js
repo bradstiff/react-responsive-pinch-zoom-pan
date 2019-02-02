@@ -5,7 +5,7 @@ import { snapToTarget, negate, constrain, getPinchLength, getPinchMidpoint, getR
 
 const SNAP_TOLERANCE = 0.001;
 const OVERZOOM_TOLERANCE = 0.05;
-const DOUBLE_TAP_THRESHOLD = 300;
+const DOUBLE_TAP_THRESHOLD = 250;
 const ANIMATION_SPEED = 0.1;
 
 const containerStyle = { 
@@ -20,15 +20,13 @@ export default class PinchZoomPan extends React.Component {
     state = {};
 
     lastPointerUpTimeStamp; //enables detecting double-tap
-    lastPanPointerPosition;
-    lastPinchLength;
+    lastPanPointerPosition; //helps determine how far to pan the image
+    lastPinchLength; //helps determine if we are pinching in or out
     lastPinchMidpoint;
-    mouseDown;
-    animation;
-    image;
+    animation; //current animation handle
+    imageRef; //image element
     isImageLoaded; //permits initial transform
-    shouldHandlePullDownRefresh;
-    originalOverscrollBehaviorY;
+    originalOverscrollBehaviorY; //saves the original overscroll-behavior-y value while temporarily preventing pull down refresh
 
     //event handlers
     handleTouchStart = (event) => {
@@ -41,6 +39,11 @@ export default class PinchZoomPan extends React.Component {
         }
         else if (touches.length === 1) {
             this.pointerDown(touches[0]);
+
+            if (this.state.top < 0 && this.isChrome ) {
+                //disable pull down refresh while user pans image
+                this.disablePullDownRefresh();
+            }
         }
     }
 
@@ -66,30 +69,31 @@ export default class PinchZoomPan extends React.Component {
 
         //suppress mouseUp, in case of tap
         this.cancelEvent(event);
+
+        if (this.state.top === 0 && this.isChrome) {
+            //panned to the top, enable pull down refresh
+            this.enablePullDownRefresh();
+        }        
     }
 
     handleMouseDown = (event) => {
         this.cancelAnimation();
-        this.mouseDown = true;
         this.pointerDown(event);
     }
 
     handleMouseMove = (event) => {
-        if (!this.mouseDown) return null;
+        if (!event.buttons) return null;
         this.pan(event)
     }
 
     handleMouseUp = (event) => {
         this.cancelAnimation();
         this.pointerUp(event.timeStamp);
-        if (this.mouseDown) {
-            this.mouseDown = false;
-        }
     }
 
     handleMouseWheel = (event) => {
         this.cancelAnimation();
-        const point = getRelativePosition(event, this.image.parentNode);
+        const point = getRelativePosition(event, this.imageRef.parentNode);
         if (event.deltaY > 0) {
             if (this.state.scale > getMinScale(this.state, this.props)) {
                 this.zoomOut(point);
@@ -133,14 +137,14 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleRefImage = ref => {
-        if (this.image) {
+        if (this.imageRef) {
             this.cancelAnimation();
-            this.image.removeEventListener('touchmove', this.handleTouchMove);
+            this.imageRef.removeEventListener('touchmove', this.handleTouchMove);
         }
 
-        this.image = ref;
+        this.imageRef = ref;
         if (ref) {
-            this.image.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+            this.imageRef.addEventListener('touchmove', this.handleTouchMove, { passive: false });
         }
 
         const { ref: imageRefProp } = React.Children.only(this.props.children);
@@ -149,7 +153,7 @@ export default class PinchZoomPan extends React.Component {
 
     //actions
     pointerDown(clientPosition) {
-        this.lastPanPointerPosition = getRelativePosition(clientPosition, this.image.parentNode);
+        this.lastPanPointerPosition = getRelativePosition(clientPosition, this.imageRef.parentNode);
     }
 
     pan(pointerClientPosition) {
@@ -159,7 +163,7 @@ export default class PinchZoomPan extends React.Component {
             return 0;
         }
 
-        const pointerPosition = getRelativePosition(pointerClientPosition, this.image.parentNode);
+        const pointerPosition = getRelativePosition(pointerClientPosition, this.imageRef.parentNode);
         const translateX = pointerPosition.x - this.lastPanPointerPosition.x;
         const translateY = pointerPosition.y - this.lastPanPointerPosition.y;
         const top = this.state.top + translateY;
@@ -248,8 +252,8 @@ export default class PinchZoomPan extends React.Component {
     //compare stored dimensions to actual dimensions; capture actual dimensions if different
     maybeHandleDimensionsChanged() {
         if (this.isImageReady) {
-            const containerDimensions = getContainerDimensions(this.image);
-            const imageDimensions = getDimensions(this.image);
+            const containerDimensions = getContainerDimensions(this.imageRef);
+            const imageDimensions = getDimensions(this.imageRef);
 
             if (!isEqualDimensions(containerDimensions, getDimensions(this.state.containerDimensions)) || 
                 !isEqualDimensions(imageDimensions, getDimensions(this.state.imageDimensions))) {
@@ -437,23 +441,20 @@ export default class PinchZoomPan extends React.Component {
     componentDidMount() {
         window.addEventListener("resize", this.handleWindowResize);
         this.maybeHandleDimensionsChanged();
-        this.initShouldHandlePullDownRefresh();
-        this.maybePreventPullDownRefresh();
     }
 
     componentDidUpdate(prevProps, prevState) {
         this.maybeHandleDimensionsChanged();
-        this.maybePreventPullDownRefresh();
     }
 
     componentWillUnmount() {
         this.cancelAnimation();
-        this.image.removeEventListener('touchmove', this.handleTouchMove);
+        this.imageRef.removeEventListener('touchmove', this.handleTouchMove);
         window.removeEventListener('resize', this.handleWindowResize);
     }
 
     get isImageReady() {
-        return this.isImageLoaded || (this.image && this.image.tagName !== 'IMG');
+        return this.isImageLoaded || (this.imageRef && this.imageRef.tagName !== 'IMG');
     }
 
     get isTransformInitialized() {
@@ -462,27 +463,22 @@ export default class PinchZoomPan extends React.Component {
             this.state.top !== undefined;
     }
 
-    initShouldHandlePullDownRefresh() {
-        try {
-            const isChrome = window.chrome || navigator.userAgent.match('CriOS');
-            const isTouch = 'ontouchstart' in document.documentElement;
-            const supportsOverscroll = CSS.supports('overscroll-behavior-y', 'none');
-            this.shouldHandlePullDownRefresh = isChrome && isTouch && supportsOverscroll;
-        } catch (e) {
-            this.shouldHandlePullDownRefresh = false;
+    get isChrome() {
+        return window.chrome || navigator.userAgent.match('CriOS');
+    }
+
+    disablePullDownRefresh() {
+        const overscrollBehaviorY = document.body.style.overscrollBehaviorY;
+        if (typeof overscrollBehaviorY === 'string' && overscrollBehaviorY != 'none' && overscrollBehaviorY != 'contain' ) {
+            //disable pull down refresh while user pans image
+            document.body.style.overscrollBehaviorY = 'none';
+            //save original value so we can restore later
+            this.originalOverscrollBehaviorY = overscrollBehaviorY;
         }
     }
 
-    maybePreventPullDownRefresh() {
-        if (!this.shouldHandlePullDownRefresh) {
-            return;
-        }
-        const overscrollBehaviorY = document.body.style.overscrollBehaviorY;
-        if (this.state.top < 0 && overscrollBehaviorY != 'none' && overscrollBehaviorY != 'contain' ) {
-            //disable pull down refresh so user can scroll image
-            this.originalOverscrollBehaviorY = overscrollBehaviorY;
-            document.body.style.overscrollBehaviorY = 'none';
-        } else if (this.state.top === 0 && overscrollBehaviorY === 'none' && this.originalOverscrollBehaviorY !== undefined) {
+    enablePullDownRefresh() {
+        if (this.originalOverscrollBehaviorY !== undefined && document.body.style.overscrollBehaviorY === 'none') {
             //restore original value
             document.body.style.overscrollBehaviorY = this.originalOverscrollBehaviorY;
             this.originalOverscrollBehaviorY = undefined;

@@ -27,9 +27,10 @@ const FlexContainerView = ({menu}) => (
             </div>
             <div style={{flex: 'auto', overflow: 'hidden', position: 'relative'}}>
                 <div style={{position: 'absolute', height: '100%', width: '100%'}}>
-                <PinchZoomPan>
-                    <img alt='Demo Image' src='http://picsum.photos/2560/1440?random' />
-                </PinchZoomPan></div>
+                    <PinchZoomPan>
+                        <img alt='Demo Image' src='http://picsum.photos/2560/1440?random' />
+                    </PinchZoomPan>
+                </div>
             </div>
         </main>
     </div>
