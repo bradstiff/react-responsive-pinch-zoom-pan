@@ -142,6 +142,12 @@ export default class PinchZoomPan extends React.Component {
     }
 
     pan(pointerClientPosition) {
+        if (!this.lastPanPointerPosition) {
+            //if we were pinching and lifted a finger
+            this.pointerDown(pointerClientPosition);
+            return 0;
+        }
+
         const pointerPosition = getRelativePosition(pointerClientPosition, this.image.parentNode);
         const translateX = pointerPosition.x - this.lastPanPointerPosition.x;
         const translateY = pointerPosition.y - this.lastPanPointerPosition.y;
