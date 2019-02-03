@@ -32,6 +32,11 @@ export default class PinchZoomPan extends React.Component {
     handleTouchStart = (event) => {
         this.cancelAnimation();
 
+        if (this.state.top < 0) {
+            //disable pull down refresh (if active) while the image can be panned down
+            this.suppressPullDownRefresh();
+        }
+
         const touches = event.touches;
         if (touches.length === 2) {
             this.pinchStart(touches);
@@ -39,11 +44,6 @@ export default class PinchZoomPan extends React.Component {
         }
         else if (touches.length === 1) {
             this.pointerDown(touches[0]);
-
-            if (this.state.top < 0) {
-                //disable pull down refresh (if active) while user pans image
-                this.suppressPullDownRefresh();
-            }
         }
     }
 
@@ -58,7 +58,11 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleTouchEnd = (event) => {
-        if (event.touches && event.touches.length > 0) return null;
+        if (event.touches && event.touches.length > 0) {
+            //lifted a finger
+            return null;
+        }
+
         this.cancelAnimation();
 
         //We allow transient +/-5% over-pinching.
@@ -70,10 +74,8 @@ export default class PinchZoomPan extends React.Component {
         //suppress mouseUp, in case of tap
         this.cancelEvent(event);
 
-        if (this.state.top === 0) {
-            //panned to the top, enable pull down refresh (if suppressed)
-            this.restorePullDownRefresh();
-        }        
+        //re-enable pull down refresh (if suppressed)
+        this.restorePullDownRefresh();
     }
 
     handleMouseDown = (event) => {
@@ -449,7 +451,7 @@ export default class PinchZoomPan extends React.Component {
 
     componentWillUnmount() {
         this.cancelAnimation();
-        this.restorePullDownRefresh();
+        this.restorePullDownRefresh(); //should never be needed...
         this.imageRef.removeEventListener('touchmove', this.handleTouchMove);
         window.removeEventListener('resize', this.handleWindowResize);
     }
@@ -469,13 +471,17 @@ export default class PinchZoomPan extends React.Component {
         if (! (window.chrome || navigator.userAgent.match('CriOS')) ) {
             return;
         }
+
         const overscrollBehaviorY = document.body.style.overscrollBehaviorY;
-        if (typeof overscrollBehaviorY === 'string' && overscrollBehaviorY != 'none' && overscrollBehaviorY != 'contain' ) {
-            //disable pull down refresh while user pans image
-            document.body.style.overscrollBehaviorY = 'none';
-            //save original value so we can restore later
-            this.originalOverscrollBehaviorY = overscrollBehaviorY;
+        if (typeof overscrollBehaviorY !== 'string' || overscrollBehaviorY === 'none' || overscrollBehaviorY === 'contain' ) {
+            //browser doesn't support CSS property, or already disabled
+            return;
         }
+
+        //disable pull down refresh 
+        document.body.style.overscrollBehaviorY = 'none';
+        //save original value so we can restore later
+        this.originalOverscrollBehaviorY = overscrollBehaviorY;
     }
 
     //Restore pull down refresh if it is currently suppressed
