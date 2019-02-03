@@ -40,9 +40,9 @@ export default class PinchZoomPan extends React.Component {
         else if (touches.length === 1) {
             this.pointerDown(touches[0]);
 
-            if (this.state.top < 0 && this.isChrome ) {
-                //disable pull down refresh while user pans image
-                this.disablePullDownRefresh();
+            if (this.state.top < 0) {
+                //disable pull down refresh (if active) while user pans image
+                this.suppressPullDownRefresh();
             }
         }
     }
@@ -70,9 +70,9 @@ export default class PinchZoomPan extends React.Component {
         //suppress mouseUp, in case of tap
         this.cancelEvent(event);
 
-        if (this.state.top === 0 && this.isChrome) {
-            //panned to the top, enable pull down refresh
-            this.enablePullDownRefresh();
+        if (this.state.top === 0) {
+            //panned to the top, enable pull down refresh (if suppressed)
+            this.restorePullDownRefresh();
         }        
     }
 
@@ -449,6 +449,7 @@ export default class PinchZoomPan extends React.Component {
 
     componentWillUnmount() {
         this.cancelAnimation();
+        this.restorePullDownRefresh();
         this.imageRef.removeEventListener('touchmove', this.handleTouchMove);
         window.removeEventListener('resize', this.handleWindowResize);
     }
@@ -463,11 +464,11 @@ export default class PinchZoomPan extends React.Component {
             this.state.top !== undefined;
     }
 
-    get isChrome() {
-        return window.chrome || navigator.userAgent.match('CriOS');
-    }
-
-    disablePullDownRefresh() {
+    //Suppress pull down refresh if the browser supports it and it is currently active
+    suppressPullDownRefresh() {
+        if (! (window.chrome || navigator.userAgent.match('CriOS')) ) {
+            return;
+        }
         const overscrollBehaviorY = document.body.style.overscrollBehaviorY;
         if (typeof overscrollBehaviorY === 'string' && overscrollBehaviorY != 'none' && overscrollBehaviorY != 'contain' ) {
             //disable pull down refresh while user pans image
@@ -477,7 +478,8 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    enablePullDownRefresh() {
+    //Restore pull down refresh if it is currently suppressed
+    restorePullDownRefresh() {
         if (this.originalOverscrollBehaviorY !== undefined && document.body.style.overscrollBehaviorY === 'none') {
             //restore original value
             document.body.style.overscrollBehaviorY = this.originalOverscrollBehaviorY;
