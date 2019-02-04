@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import ZoomButtons from './ZoomButtons'
-import { snapToTarget, negate, constrain, getPinchLength, getPinchMidpoint, getRelativePosition, setRef, isEqualDimensions, getDimensions, getContainerDimensions, isEqualTransform, getMinScale, debug } from './Utils';
+import { snapToTarget, negate, constrain, getPinchLength, getPinchMidpoint, getRelativePosition, setRef, isEqualDimensions, getDimensions, getContainerDimensions, isEqualTransform, getMinScale, debug, cancelEvent } from './Utils';
 
 const SNAP_TOLERANCE = 0.001;
 const OVERZOOM_TOLERANCE = 0.05;
@@ -51,9 +51,16 @@ export default class PinchZoomPan extends React.Component {
         const touches = event.touches;
         if (touches.length === 2) {
             this.pinchChange(touches);
+
+            //suppress viewport scaling on iOS
+            cancelEvent(event);
         }
         else if (touches.length === 1) {
-            this.pan(touches[0]) > 0;
+            if (this.pan(touches[0])) {
+                //we are panning into the overflow of the image; suppress viewport panning
+                //pan returns false when when there is no overflow to pan into
+                cancelEvent(event);
+            }
         }
     }
 
@@ -72,7 +79,7 @@ export default class PinchZoomPan extends React.Component {
         this.pointerUp(event.timeStamp);
 
         //suppress mouseUp, in case of tap
-        this.cancelEvent(event);
+        cancelEvent(event);
 
         //re-enable pull down refresh (if suppressed)
         this.restorePullDownRefresh();
@@ -99,12 +106,12 @@ export default class PinchZoomPan extends React.Component {
         if (event.deltaY > 0) {
             if (this.state.scale > getMinScale(this.state, this.props)) {
                 this.zoomOut(point);
-                this.cancelEvent(event);
+                cancelEvent(event);
             }
         } else if (event.deltaY < 0) {
             if (this.state.scale < this.props.maxScale) {
                 this.zoomIn(point);
-                this.cancelEvent(event);
+                cancelEvent(event);
             }
         }
     }
@@ -132,12 +139,6 @@ export default class PinchZoomPan extends React.Component {
 
     handleWindowResize = () => this.maybeHandleDimensionsChanged();
     
-    cancelEvent = event => {
-        if (event.cancelable) {
-            event.preventDefault();
-        }
-    }
-
     handleRefImage = ref => {
         if (this.imageRef) {
             this.cancelAnimation();
@@ -159,6 +160,10 @@ export default class PinchZoomPan extends React.Component {
     }
 
     pan(pointerClientPosition) {
+        if (!this.isTransformInitialized) {
+            return;
+        }
+
         if (!this.lastPanPointerPosition) {
             //if we were pinching and lifted a finger
             this.pointerDown(pointerClientPosition);
@@ -168,15 +173,11 @@ export default class PinchZoomPan extends React.Component {
         const pointerPosition = getRelativePosition(pointerClientPosition, this.imageRef.parentNode);
         const translateX = pointerPosition.x - this.lastPanPointerPosition.x;
         const translateY = pointerPosition.y - this.lastPanPointerPosition.y;
+        this.lastPanPointerPosition = pointerPosition;
+
         const top = this.state.top + translateY;
         const left = this.state.left + translateX;
-
-        //use 0 tolerance to prevent over-panning (doesn't look good)
-        this.move(top, left, 0)
-        this.lastPanPointerPosition = pointerPosition;
-        return translateY > 0 ? 1 //swiping down
-            : translateY < 0 ? -1 //swiping up
-            : 0;
+        return this.constrainAndApplyTransform(top, left, this.state.scale, 0, 0);
     }
 
     pointerUp(timeStamp) {
@@ -194,13 +195,6 @@ export default class PinchZoomPan extends React.Component {
             //reset
             this.applyInitialTransform(ANIMATION_SPEED);
         }
-    }
-
-    move(top, left, tolerance, speed = 0) {
-        if (!this.isTransformInitialized) {
-            return;
-        }
-        this.constrainAndApplyTransform(top, left, this.state.scale, tolerance, speed);
     }
 
     pinchStart(touches) {
@@ -300,9 +294,12 @@ export default class PinchZoomPan extends React.Component {
         const transform = this.getCorrectedTransform(requestedTransform, tolerance) || requestedTransform;
         debug(`Applying transform: left ${transform.left}, top ${transform.top}, scale ${transform.scale}`);
 
-        if (! isEqualTransform(transform, this.state) ) {
-            this.applyTransform(transform, speed);
+        if (isEqualTransform(transform, this.state)) {
+            return false;
         }
+
+        this.applyTransform(transform, speed);
+        return true;
     }
 
     applyTransform({ top, left, scale }, speed) {
@@ -417,7 +414,7 @@ export default class PinchZoomPan extends React.Component {
                     onMouseMove: this.handleMouseMove,
                     onMouseUp: this.handleMouseUp,
                     onWheel: this.handleMouseWheel,
-                    onDragStart: this.cancelEvent,
+                    onDragStart: cancelEvent,
                     onLoad: this.handleImageLoad,
                     ref: this.handleRefImage,
                     style: style

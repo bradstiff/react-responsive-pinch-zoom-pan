@@ -114,3 +114,9 @@ export function debug(message) {
         console.log(message);
     }
 }
+
+export const cancelEvent = event => {
+    if (event.cancelable) {
+        event.preventDefault();
+    }
+}
