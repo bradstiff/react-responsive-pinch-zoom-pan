@@ -115,8 +115,48 @@ export function debug(message) {
     }
 }
 
-export const cancelEvent = event => {
-    if (event.cancelable) {
-        event.preventDefault();
+export const tryCancelEvent = event => {
+    if (event.cancelable === false) {
+        return false;
+    }
+
+    event.preventDefault();
+    return true;
+}
+
+function calculateOverflowLeft(left, scale, imageDimensions, containerDimensions) {
+    const overflow = negate(left);
+    return overflow > 0
+        ? overflow
+        : 0;
+}
+
+function calculateOverflowTop(top, scale, imageDimensions, containerDimensions) {
+    const overflow = negate(top);
+    return overflow > 0
+        ? overflow
+        : 0;
+}
+
+function calculateOverflowRight(left, scale, imageDimensions, containerDimensions) {
+    const overflow = Math.max(0, (scale * imageDimensions.width) - containerDimensions.width);
+    return overflow > 0
+        ? overflow - negate(left)
+        : 0;
+}
+
+function calculateOverflowBottom(top, scale, imageDimensions, containerDimensions) {
+    const overflow = Math.max(0, (scale * imageDimensions.height) - containerDimensions.height);
+    return overflow > 0
+        ? overflow - negate(top)
+        : 0;
+}
+
+export function calculateImageOverflow(top, left, scale, imageDimensions, containerDimensions) {
+    return {
+        top: calculateOverflowTop(top, scale, imageDimensions, containerDimensions),
+        right: calculateOverflowRight(left, scale, imageDimensions, containerDimensions),
+        bottom: calculateOverflowBottom(top, scale, imageDimensions, containerDimensions),
+        left: calculateOverflowLeft(left, scale, imageDimensions, containerDimensions),
     }
 }
