@@ -79,7 +79,7 @@ export default class PinchZoomPan extends React.Component {
     originalOverscrollBehaviorY; //saves the original overscroll-behavior-y value while temporarily preventing pull down refresh
 
     //event handlers
-    handleTouchStart = (event) => {
+    handleTouchStart = event => {
         this.cancelAnimation();
 
         const touches = event.touches;
@@ -94,7 +94,7 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    handleTouchMove = (event) => {
+    handleTouchMove = event => {
         const touches = event.touches;
         if (touches.length === 2) {
             this.pinchChange(touches);
@@ -135,10 +135,14 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    handleTouchEnd = (event) => {
+    handleTouchEnd = event => {
         this.cancelAnimation();
         if (event.touches.length === 0 && event.changedTouches.length === 1) {
-            this.pointerUp(event.timeStamp);
+            if (this.lastPointerUpTimeStamp && this.lastPointerUpTimeStamp + DOUBLE_TAP_THRESHOLD > event.timeStamp) {
+                const pointerPosition = getRelativePosition(event.changedTouches[0], this.imageRef.parentNode);
+                this.doubleClick(pointerPosition);
+            }
+            this.lastPointerUpTimeStamp = event.timeStamp;
             tryCancelEvent(event); //suppress mouse events
         }
 
@@ -148,22 +152,23 @@ export default class PinchZoomPan extends React.Component {
         return;
     }
 
-    handleMouseDown = (event) => {
+    handleMouseDown = event => {
         this.cancelAnimation();
         this.pointerDown(event);
     }
 
-    handleMouseMove = (event) => {
+    handleMouseMove = event => {
         if (!event.buttons) return null;
         this.pan(event)
     }
 
-    handleMouseUp = (event) => {
+    handleMouseDoubleClick = event => {
         this.cancelAnimation();
-        this.pointerUp(event.timeStamp);
+        var pointerPosition = getRelativePosition(event, this.imageRef.parentNode);
+        this.doubleClick(pointerPosition);
     }
 
-    handleMouseWheel = (event) => {
+    handleMouseWheel = event => {
         this.cancelAnimation();
         const point = getRelativePosition(event, this.imageRef.parentNode);
         if (event.deltaY > 0) {
@@ -250,15 +255,7 @@ export default class PinchZoomPan extends React.Component {
         };
     }
 
-    pointerUp(timeStamp) {
-        if (this.lastPointerUpTimeStamp && this.lastPointerUpTimeStamp + DOUBLE_TAP_THRESHOLD > timeStamp) {
-            this.doubleTap(this.lastPanPointerPosition);
-        }
-
-        this.lastPointerUpTimeStamp = timeStamp;
-    }
-
-    doubleTap(pointerPosition) {
+    doubleClick(pointerPosition) {
         if (String(this.props.doubleTapBehavior).toLowerCase() === 'zoom' && this.state.scale * (1 + OVERZOOM_TOLERANCE) < this.props.maxScale) {
             this.zoomIn(pointerPosition, ANIMATION_SPEED, 0.3);
         } else {
@@ -481,7 +478,7 @@ export default class PinchZoomPan extends React.Component {
                     onTouchEnd: this.handleTouchEnd,
                     onMouseDown: this.handleMouseDown,
                     onMouseMove: this.handleMouseMove,
-                    onMouseUp: this.handleMouseUp,
+                    onDoubleClick: this.handleMouseDoubleClick,
                     onWheel: this.handleMouseWheel,
                     onDragStart: tryCancelEvent,
                     onLoad: this.handleImageLoad,
@@ -554,7 +551,8 @@ export default class PinchZoomPan extends React.Component {
         //to prevent viewport scrolling.
         //Other browsers have no- to partial-support of touch-action, but still allow canceling touchmove, 
         //so we rely on that to prevent viewport scrolling when necessary
-        return window.chrome || navigator.userAgent.match('CriOS');
+        return CSS && CSS.supports('touch-action', 'pan-up');
+        //return window.chrome || navigator.userAgent.match('CriOS');
     }
 }
 
