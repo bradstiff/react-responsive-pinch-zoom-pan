@@ -74,7 +74,7 @@ export const isEqualTransform = (transform1, transform2) => {
         round(transform1.scale, 5) === round(transform2.scale, 5);
 }
 
-const calculateAutofitScale = (containerDimensions, imageDimensions) => {
+export const getAutofitScale = (containerDimensions, imageDimensions) => {
     const { width: imageWidth, height: imageHeight } = imageDimensions || {};
     if (! (imageWidth > 0 && imageHeight > 0) ) {
         return 1;
@@ -92,7 +92,7 @@ export const getMinScale = createSelector(
     (state, props) => props.minScale,
     (containerDimensions, imageDimensions, minScaleProp) => 
         String(minScaleProp).toLowerCase() === 'auto'
-            ? calculateAutofitScale(containerDimensions, imageDimensions)
+            ? getAutofitScale(containerDimensions, imageDimensions)
             : minScaleProp || 1
 )
 
@@ -152,11 +152,15 @@ function calculateOverflowBottom(top, scale, imageDimensions, containerDimension
         : 0;
 }
 
-export function calculateImageOverflow(top, left, scale, imageDimensions, containerDimensions) {
+export const getImageOverflow = (top, left, scale, imageDimensions, containerDimensions) => {
     return {
         top: calculateOverflowTop(top, scale, imageDimensions, containerDimensions),
         right: calculateOverflowRight(left, scale, imageDimensions, containerDimensions),
         bottom: calculateOverflowBottom(top, scale, imageDimensions, containerDimensions),
         left: calculateOverflowLeft(left, scale, imageDimensions, containerDimensions),
     }
+}
+
+export const getRequiredImagePosition = (position, scale, imageDimensions, containerDimensions) => {
+    const overflow = getImageOverflow()
 }
