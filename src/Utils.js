@@ -109,12 +109,6 @@ function round(number, precision) {
     return Math.round(number);
 };
 
-export function debug(message) {
-    if (process.env.NODE_ENV !== 'production') {    
-        console.log(message);
-    }
-}
-
 export const tryCancelEvent = event => {
     if (event.cancelable === false) {
         return false;

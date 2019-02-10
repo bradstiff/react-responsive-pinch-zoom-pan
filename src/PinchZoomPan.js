@@ -6,7 +6,7 @@ import warning from 'warning';
 import ZoomButtons from './ZoomButtons'
 import DebugView from './StateDebugView';
 
-import { snapToTarget, negate, constrain, getPinchLength, getPinchMidpoint, getRelativePosition, setRef, isEqualDimensions, getDimensions, getContainerDimensions, isEqualTransform, getAutofitScale, getMinScale, debug, tryCancelEvent, getImageOverflow } from './Utils';
+import { snapToTarget, negate, constrain, getPinchLength, getPinchMidpoint, getRelativePosition, setRef, isEqualDimensions, getDimensions, getContainerDimensions, isEqualTransform, getAutofitScale, getMinScale, tryCancelEvent, getImageOverflow } from './Utils';
 
 const OVERZOOM_TOLERANCE = 0.05;
 const DOUBLE_TAP_THRESHOLD = 250;
@@ -186,7 +186,7 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleImageLoad = event => {
-        debug('handleImageLoad'); 
+        this.debug('handleImageLoad'); 
         this.isImageLoaded = true;
         this.maybeHandleDimensionsChanged();
 
@@ -341,11 +341,11 @@ export default class PinchZoomPan extends React.Component {
                         }
                     }
                 );
-                debug(`Dimensions changed: Container: ${containerDimensions.width}, ${containerDimensions.height}, Image: ${imageDimensions.width}, ${imageDimensions.height}`);
+                this.debug(`Dimensions changed: Container: ${containerDimensions.width}, ${containerDimensions.height}, Image: ${imageDimensions.width}, ${imageDimensions.height}`);
             }
         }
         else {
-            debug('Image not loaded');
+            this.debug('Image not loaded');
         }
     }
 
@@ -358,11 +358,11 @@ export default class PinchZoomPan extends React.Component {
             left: requestedLeft,
             scale: requestedScale
         };
-        debug(`Requesting transform: left ${requestedLeft}, top ${requestedTop}, scale ${requestedScale}`);
+        this.debug(`Requesting transform: left ${requestedLeft}, top ${requestedTop}, scale ${requestedScale}`);
 
         //Correct the transform if needed to prevent overpanning and overzooming
         const transform = this.getCorrectedTransform(requestedTransform, tolerance) || requestedTransform;
-        debug(`Applying transform: left ${transform.left}, top ${transform.top}, scale ${transform.scale}`);
+        this.debug(`Applying transform: left ${transform.left}, top ${transform.top}, scale ${transform.scale}`);
 
         if (isEqualTransform(transform, this.state)) {
             return false;
@@ -496,7 +496,7 @@ export default class PinchZoomPan extends React.Component {
     //lifecycle methods
     render() {
         const childElement = React.Children.only(this.props.children);
-        const { zoomButtons, maxScale, debugView } = this.props;
+        const { zoomButtons, maxScale, debug } = this.props;
         const { scale } = this.state;
 
         const touchAction = this.controlOverscrollViaCss
@@ -519,7 +519,7 @@ export default class PinchZoomPan extends React.Component {
                     onZoomOutClick={this.handleZoomOutClick} 
                     onZoomInClick={this.handleZoomInClick} 
                 />}
-                {debugView && <DebugView {...this.state} overflow={imageOverflow(this.state)} />}
+                {debug && <DebugView {...this.state} overflow={imageOverflow(this.state)} />}
                 {React.cloneElement(childElement, {
                     onTouchStart: this.handleTouchStart,
                     onTouchEnd: this.handleTouchEnd,
@@ -576,6 +576,10 @@ export default class PinchZoomPan extends React.Component {
         return isInitialized(this.state.top, this.state.left, this.state.scale);
     }
 
+    get controlOverscrollViaCss() {
+        return CSS && CSS.supports('touch-action', 'pan-up');
+    }
+
     calculateNegativeSpace(scale) {
         //get difference in dimension between container and scaled image
         const { containerDimensions, imageDimensions } = this.state;
@@ -593,13 +597,10 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
-    get controlOverscrollViaCss() {
-        //Chrome fully supports touch-action CSS property, and does not support canceling touchmove event
-        //to prevent viewport scrolling.
-        //Other browsers have no- to partial-support of touch-action, but still allow canceling touchmove, 
-        //so we rely on that to prevent viewport scrolling when necessary
-        return CSS && CSS.supports('touch-action', 'pan-up');
-        //return window.chrome || navigator.userAgent.match('CriOS');
+    debug(message) {
+        if (this.props.debug) {    
+            console.log(message);
+        }
     }
 }
 
