@@ -24,7 +24,7 @@ const CenteredView = ({menu, width, height, imageWidth, imageHeight}) => {
         <div>
             <nav>{menu}</nav>
             <main style={{ width: `${width}px`, height: `${height}px` }}>
-                <PinchZoomPan doubleTapBehavior='zoom' position='center' initialScale={1} initialTop={1} initialLeft={1} minScale={1} maxScale={4} zoomButtons={false} debug={isDevelopment()}>
+                <PinchZoomPan doubleTapBehavior='zoom' position='center' initialScale={1} minScale={1} maxScale={4} zoomButtons={false} debug={isDevelopment()}>
                     <img alt='Demo Image' src={`http://picsum.photos/${imageWidth}/${imageHeight}?random`} />
                 </PinchZoomPan>
             </main>
