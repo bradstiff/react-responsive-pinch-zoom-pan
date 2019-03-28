@@ -6,11 +6,6 @@ import { faPlus, faMinus } from '@fortawesome/free-solid-svg-icons';
 
 import './styles.css';
 
-const containerStyle = { 
-    position: 'absolute', 
-    zIndex: 1000 
-};
-
 const ZoomOutButton = ({ disabled, onClick }) => (
     <button className='iconButton' style={{ margin: '10px' }} onClick={onClick} disabled={disabled}>
         <FontAwesomeIcon icon={faMinus} />
@@ -24,7 +19,7 @@ const ZoomInButton = ({ disabled, onClick }) => (
 );
 
 const ZoomButtons = ({scale, minScale, maxScale, onZoomInClick, onZoomOutClick}) => (
-    <div style={containerStyle}>
+    <div className="zoomButtonContainer">
         <ZoomOutButton onClick={onZoomOutClick} disabled={scale <= minScale} />
         <ZoomInButton onClick={onZoomInClick} disabled={scale >= maxScale} />
     </div>

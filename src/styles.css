@@ -1,33 +1,38 @@
+.zoomButtonContainer {
+  position: absolute;
+  z-index: 1000;
+}
+
 .iconButton {
-    background-image: linear-gradient(to bottom, #fff 0%, #e0e0e0 100%);
-    background-color: #fff;
-    background-repeat: repeat-x;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075);
-    padding: 8px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    cursor: pointer;
-    text-shadow: 0 1px 0 #fff;
-    color: #333;
-    font-size: 12px;
-    line-height: 12px;
+  background-image: linear-gradient(to bottom, #fff 0%, #e0e0e0 100%);
+  background-color: #fff;
+  background-repeat: repeat-x;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075);
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  text-shadow: 0 1px 0 #fff;
+  color: #333;
+  font-size: 12px;
+  line-height: 12px;
 }
 
 .iconButton:hover {
-    color: #333;
-    background-color: #e6e6e6;
-    border-color: #adadad;
-    background-position: 0 -15px;
+  color: #333;
+  background-color: #e6e6e6;
+  border-color: #adadad;
+  background-position: 0 -15px;
 }
 
 .iconButton[disabled] {
-    opacity: .65;
-    box-shadow: none;
-    background-color: #e0e0e0;
-    background-image: none;
+  opacity: .65;
+  box-shadow: none;
+  background-color: #e0e0e0;
+  background-image: none;
 }
 
 .iconButton[disabled]:hover {
-    border-color: #ccc;
-    cursor: default;
+  border-color: #ccc;
+  cursor: default;
 }
