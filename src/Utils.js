@@ -50,8 +50,8 @@ export const getDimensions = object => {
         return undefined;
     }
     return {
-        width: object.width,
-        height: object.height,
+        width: object.offsetWidth || object.width,
+        height: object.offsetHeight || object.height,
     };
 }
 
