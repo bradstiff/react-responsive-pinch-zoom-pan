@@ -2,7 +2,7 @@
   "name": "react-responsive-pinch-zoom-pan",
   "version": "0.2.2",
   "description": "Enables zooming and panning an image, both mobile and desktop.",
-  "main": "dist/PinchZoomPan.js",
+  "main": "src/PinchZoomPan.js",
   "scripts": {
     "start": "webpack-dev-server --mode development --host 0.0.0.0",
     "test": "jest",
