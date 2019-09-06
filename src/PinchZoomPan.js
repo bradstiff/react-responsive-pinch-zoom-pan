@@ -190,7 +190,7 @@ export default class PinchZoomPan extends React.Component {
         this.isImageLoaded = true;
         this.maybeHandleDimensionsChanged();
 
-        const { onLoad } = React.Children.only(this.props.children);
+        const { onLoad } = React.Children.only(this.props.children).props;
         if (typeof onLoad === 'function') {
             onLoad(event);
         }
@@ -261,7 +261,7 @@ export default class PinchZoomPan extends React.Component {
             this.zoomIn(pointerPosition, ANIMATION_SPEED, 0.3);
         } else {
             //reset
-            this.applyInitialTransform(ANIMATION_SPEED);
+            this.handleResetZoom();
         }
     }
 
@@ -457,6 +457,8 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
+    handleResetZoom = () => this.applyInitialTransform(ANIMATION_SPEED)
+
     applyInitialTransform(speed = 0) {
         const { imageDimensions, containerDimensions } = this.state;
         const { position, initialScale, maxScale, initialTop, initialLeft } = this.props;
@@ -496,7 +498,7 @@ export default class PinchZoomPan extends React.Component {
     //lifecycle methods
     render() {
         const childElement = React.Children.only(this.props.children);
-        const { zoomButtons, maxScale, debug } = this.props;
+        const { zoomButtons, maxScale, debug, renderZoomButtons } = this.props;
         const { scale } = this.state;
 
         const touchAction = this.controlOverscrollViaCss
@@ -511,29 +513,35 @@ export default class PinchZoomPan extends React.Component {
         };
 
         return (
-            <div style={containerStyle}>
-                {zoomButtons && this.isImageReady && this.isTransformInitialized && <ZoomButtons 
-                    scale={scale} 
-                    minScale={getMinScale(this.state, this.props)} 
-                    maxScale={maxScale} 
-                    onZoomOutClick={this.handleZoomOutClick} 
-                    onZoomInClick={this.handleZoomInClick} 
-                />}
-                {debug && <DebugView {...this.state} overflow={imageOverflow(this.state)} />}
-                {React.cloneElement(childElement, {
-                    onTouchStart: this.handleTouchStart,
-                    onTouchEnd: this.handleTouchEnd,
-                    onMouseDown: this.handleMouseDown,
-                    onMouseMove: this.handleMouseMove,
-                    onDoubleClick: this.handleMouseDoubleClick,
-                    onWheel: this.handleMouseWheel,
-                    onDragStart: tryCancelEvent,
-                    onLoad: this.handleImageLoad,
-                    onContextMenu: tryCancelEvent,
-                    ref: this.handleRefImage,
-                    style: imageStyle(this.state)
+          <div style={containerStyle}>
+            {zoomButtons &&
+              this.isImageReady &&
+              this.isTransformInitialized &&
+                renderZoomButtons({
+                    scale,
+                    maxScale,
+                    minScale: getMinScale(this.state, this.props),
+                    onZoomOutClick: this.handleZoomOutClick,
+                    onZoomInClick: this.handleZoomInClick,
+                    onReset: this.handleResetZoom
                 })}
-            </div>
+            {debug && (
+              <DebugView {...this.state} overflow={imageOverflow(this.state)} />
+            )}
+            {React.cloneElement(childElement, {
+              onTouchStart: this.handleTouchStart,
+              onTouchEnd: this.handleTouchEnd,
+              onMouseDown: this.handleMouseDown,
+              onMouseMove: this.handleMouseMove,
+              onDoubleClick: this.handleMouseDoubleClick,
+              onWheel: this.handleMouseWheel,
+              onDragStart: tryCancelEvent,
+              onLoad: this.handleImageLoad,
+              onContextMenu: tryCancelEvent,
+              ref: this.handleRefImage,
+              style: imageStyle(this.state)
+            })}
+          </div>
         );
     }
 
@@ -610,7 +618,10 @@ PinchZoomPan.defaultProps = {
     maxScale: 1,
     position: 'topLeft',
     zoomButtons: true,
-    doubleTapBehavior: 'reset'
+    doubleTapBehavior: 'reset',
+    renderZoomButtons: props => (
+        <ZoomButtons {...props} />
+    ),
 };
 
 PinchZoomPan.propTypes = {
@@ -629,4 +640,5 @@ PinchZoomPan.propTypes = {
     doubleTapBehavior: PropTypes.oneOf(['reset', 'zoom']),
     initialTop: PropTypes.number,
     initialLeft: PropTypes.number,
+    renderZoomButtons: PropTypes.func,
 };
