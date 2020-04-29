@@ -577,7 +577,7 @@ export default class PinchZoomPan extends React.Component {
     }
 
     get controlOverscrollViaCss() {
-        return CSS && CSS.supports('touch-action', 'pan-up');
+        return window.CSS && window.CSS.supports('touch-action', 'pan-up');
     }
 
     calculateNegativeSpace(scale) {
