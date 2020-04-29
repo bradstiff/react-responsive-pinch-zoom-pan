@@ -190,7 +190,7 @@ export default class PinchZoomPan extends React.Component {
         this.isImageLoaded = true;
         this.maybeHandleDimensionsChanged();
 
-        const { onLoad } = React.Children.only(this.props.children);
+        const { onLoad } = React.Children.only(this.props.children).props;
         if (typeof onLoad === 'function') {
             onLoad(event);
         }
