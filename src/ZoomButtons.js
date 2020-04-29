@@ -2,8 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import faPlus from '@fortawesome/free-solid-svg-icons/faPlus';
-import faMinus from '@fortawesome/free-solid-svg-icons/faMinus';
+import { faPlus } from '@fortawesome/free-solid-svg-icons/faPlus';
+import { faMinus } from '@fortawesome/free-solid-svg-icons/faMinus';
 
 import './styles.css';
 
@@ -14,13 +14,13 @@ const containerStyle = {
 
 const ZoomOutButton = ({ disabled, onClick }) => (
     <button className='iconButton' style={{ margin: '10px' }} onClick={onClick} disabled={disabled}>
-        <FontAwesomeIcon icon={faMinus} />
+        <FontAwesomeIcon icon={faMinus} fixedWidth />
     </button>
 );
 
 const ZoomInButton = ({ disabled, onClick }) => (
     <button className='iconButton' style={{ margin: '10px', marginLeft: '0px' }} onClick={onClick} disabled={disabled}>
-        <FontAwesomeIcon icon={faPlus} />
+        <FontAwesomeIcon icon={faPlus} fixedWidth />
     </button>
 );
 
