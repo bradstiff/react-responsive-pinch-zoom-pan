@@ -510,6 +510,8 @@ export default class PinchZoomPan extends React.Component {
             touchAction: touchAction,
         };
 
+        const CustomZoomButtons = this.props.customZoomButtons;
+
         return (
             <div style={containerStyle}>
                 {zoomButtons && this.isImageReady && this.isTransformInitialized && <ZoomButtons 
@@ -518,6 +520,13 @@ export default class PinchZoomPan extends React.Component {
                     maxScale={maxScale} 
                     onZoomOutClick={this.handleZoomOutClick} 
                     onZoomInClick={this.handleZoomInClick} 
+                />}
+                {CustomZoomButtons && <CustomZoomButtons 
+                    scale={scale}
+                    minScale={getMinScale(this.state, this.props)}
+                    maxScale={maxScale}
+                    onZoomOutClick={this.handleZoomOutClick}
+                    onZoomInClick={this.handleZoomInClick}
                 />}
                 {debug && <DebugView {...this.state} overflow={imageOverflow(this.state)} />}
                 {React.cloneElement(childElement, {
@@ -610,6 +619,7 @@ PinchZoomPan.defaultProps = {
     maxScale: 1,
     position: 'topLeft',
     zoomButtons: true,
+    customZoomButtons: null,
     doubleTapBehavior: 'reset'
 };
 
@@ -626,6 +636,10 @@ PinchZoomPan.propTypes = {
     maxScale: PropTypes.number,
     position: PropTypes.oneOf(['topLeft', 'center']),
     zoomButtons: PropTypes.bool,
+    customZoomButtons: PropTypes.oneOfType([
+        PropTypes.func,
+        PropTypes.element
+    ]),
     doubleTapBehavior: PropTypes.oneOf(['reset', 'zoom']),
     initialTop: PropTypes.number,
     initialLeft: PropTypes.number,
