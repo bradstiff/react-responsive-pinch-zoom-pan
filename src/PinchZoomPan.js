@@ -170,6 +170,8 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleMouseWheel = event => {
+        if (this.props.disableWheel) return null;
+
         this.cancelAnimation();
         const point = getRelativePosition(event, this.imageRef.parentNode);
         if (event.deltaY > 0) {
@@ -207,7 +209,7 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleWindowResize = () => this.maybeHandleDimensionsChanged();
-    
+
     handleRefImage = ref => {
         if (this.imageRef) {
             this.cancelAnimation();
@@ -415,7 +417,7 @@ export default class PinchZoomPan extends React.Component {
     //Returns constrained transform when requested transform is outside constraints with tolerance, otherwise returns null
     getCorrectedTransform(requestedTransform, tolerance) {
         const scale = this.getConstrainedScale(requestedTransform.scale, tolerance);
-        
+
         //get dimensions by which scaled image overflows container
         const negativeSpace = this.calculateNegativeSpace(scale);
         const overflow = {
@@ -610,7 +612,8 @@ PinchZoomPan.defaultProps = {
     maxScale: 1,
     position: 'topLeft',
     zoomButtons: true,
-    doubleTapBehavior: 'reset'
+    doubleTapBehavior: 'reset',
+    disableWheel: false,
 };
 
 PinchZoomPan.propTypes = {
@@ -629,4 +632,5 @@ PinchZoomPan.propTypes = {
     doubleTapBehavior: PropTypes.oneOf(['reset', 'zoom']),
     initialTop: PropTypes.number,
     initialLeft: PropTypes.number,
+    disableWheel: PropTypes.bool,
 };

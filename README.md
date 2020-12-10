@@ -48,6 +48,7 @@ minScale	| number	| 'auto'	| The minimum scale to which the image can be zoomed 
 maxScale	| number	| 1			| The maximum scale to which the image can be zoomed in. 
 position    | 'center' or 'topLeft'    | 'topLeft'  | Position of the image relative to the container. Applies when the scaled image is smaller than the container.
 zoomButtons	| bool		| true		| Render plus (+) and minus (-) buttons on top of the image as another way to access the zoom feature.
+disableWheel| bool		| false		| Disable zooming in and out when scrolling over the image.
 doubleTapBehavior	| 'reset' or 'zoom' | 'reset'		| Whether to zoom in or reset to initial scale on double-click / double-tap.
 
 ## Development
