@@ -198,6 +198,16 @@ export default class PinchZoomPan extends React.Component {
         }
     }
 
+    handleContextMenu = event => {
+        if (this.props.enableContextMenu) {
+            if (this.props.onContextMenu) {
+                return this.props.onContextMenu(event)
+            } // else, event will bubble up
+        } else {
+            return tryCancelEvent(event)
+        }
+    }
+
     handleZoomInClick = () => {
         this.cancelAnimation();
         this.zoomIn();
@@ -531,7 +541,7 @@ export default class PinchZoomPan extends React.Component {
                     onWheel: this.handleMouseWheel,
                     onDragStart: tryCancelEvent,
                     onLoad: this.handleImageLoad,
-                    onContextMenu: tryCancelEvent,
+                    onContextMenu: this.handleContextMenu,
                     ref: this.handleRefImage,
                     style: imageStyle(this.state)
                 })}
@@ -633,4 +643,6 @@ PinchZoomPan.propTypes = {
     initialTop: PropTypes.number,
     initialLeft: PropTypes.number,
     disableWheel: PropTypes.bool,
+    enableContextMenu: PropTypes.bool,
+    onContextMenu: PropTypes.func,
 };
