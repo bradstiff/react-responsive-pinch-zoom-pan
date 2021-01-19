@@ -4,14 +4,18 @@ import PinchZoomPan from "../../src/PinchZoomPan";
 
 const isDevelopment = () => process.env.NODE_ENV !== 'production';
 
-const SizedContainerView = ({menu, width, height}) => {
+const SizedContainerView = ({menu, width, height, withContextMenu}) => {
     const imageWidth = width * 2;
     const imageHeight = height * 2;
     return (
         <div>
             <nav>{menu}</nav>
             <main style={{ width: `${width}px`, height: `${height}px` }}>
-                <PinchZoomPan doubleTapBehavior='zoom' debug={isDevelopment()}>
+                <PinchZoomPan
+                    doubleTapBehavior='zoom'
+                    debug={isDevelopment()}
+                    enableContextMenu={withContextMenu}
+                    onContextMenu={withContextMenu ? () => window.alert('Custom Context Menu Call ! !') : undefined}>
                     <img alt='Demo Image' src={`http://picsum.photos/${imageWidth}/${imageHeight}?random`} />
                 </PinchZoomPan>
             </main>
@@ -72,6 +76,7 @@ const Menu = ({viewId, onViewChange}) => {
             <a href='#' onClick={() => onViewChange(1)} style={getLinkStyle(1)}>Medium</a>
             <a href='#' onClick={() => onViewChange(3)} style={getLinkStyle(3)}>Centered</a>
             <a href='#' onClick={() => onViewChange(2)} style={getLinkStyle(2)}>Full-screen Flex</a>
+            <a href='#' onClick={() => onViewChange(4)} style={getLinkStyle(4)}>With Context Menu</a>
         </React.Fragment>
     );
 }
@@ -90,12 +95,19 @@ class App extends React.Component {
     render() {
         const { viewId } = this.state;
         const menu = <Menu viewId={viewId} onViewChange={this.handleViewChange} />
-        return (
-            viewId === 2 ? <FlexContainerView menu={menu} />
-            : viewId === 3 ? <CenteredView menu={menu} width={300} height={500} imageWidth={200} imageHeight={400} />
-            : viewId === 1 ? <SizedContainerView menu={menu} width={500} height={800} />
-            : <SizedContainerView menu={menu} width={300} height={500} />
-        );
+
+        switch (viewId) {
+            case 4:
+                return <SizedContainerView menu={menu} width={300} height={500} withContextMenu />
+            case 3:
+                return <CenteredView menu={menu} width={300} height={500} imageWidth={200} imageHeight={400} />
+            case 2:
+                return <FlexContainerView menu={menu} />
+            case 1:
+                return <SizedContainerView menu={menu} width={500} height={800} />
+            default:
+                return <SizedContainerView menu={menu} width={300} height={500} />
+        }
     }
 }
 
