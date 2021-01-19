@@ -624,6 +624,8 @@ PinchZoomPan.defaultProps = {
     zoomButtons: true,
     doubleTapBehavior: 'reset',
     disableWheel: false,
+    enableContextMenu: false,
+    onContextMenu: undefined,
 };
 
 PinchZoomPan.propTypes = {
