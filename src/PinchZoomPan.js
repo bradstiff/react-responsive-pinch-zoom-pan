@@ -170,6 +170,9 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleMouseWheel = event => {
+        if(!this.props.zoomOnScroll) {
+            return;
+        }
         this.cancelAnimation();
         const point = getRelativePosition(event, this.imageRef.parentNode);
         if (event.deltaY > 0) {
@@ -610,7 +613,8 @@ PinchZoomPan.defaultProps = {
     maxScale: 1,
     position: 'topLeft',
     zoomButtons: true,
-    doubleTapBehavior: 'reset'
+    doubleTapBehavior: 'reset',
+    zoomOnScroll: true
 };
 
 PinchZoomPan.propTypes = {
@@ -629,4 +633,5 @@ PinchZoomPan.propTypes = {
     doubleTapBehavior: PropTypes.oneOf(['reset', 'zoom']),
     initialTop: PropTypes.number,
     initialLeft: PropTypes.number,
+    zoomOnScroll: PropTypes.bool
 };
