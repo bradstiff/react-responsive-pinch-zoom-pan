@@ -399,6 +399,8 @@ export default class PinchZoomPan extends React.Component {
                 top,
                 left,
                 scale,
+            },()=> {
+                this.props.onScaleChange(scale);
             });
         }
     }
@@ -509,7 +511,7 @@ export default class PinchZoomPan extends React.Component {
         const containerStyle = {
             width: '100%', 
             height: '100%',
-            overflow: 'hidden',
+            overflow: 'scroll',
             touchAction: touchAction,
         };
 
@@ -526,8 +528,8 @@ export default class PinchZoomPan extends React.Component {
                 {React.cloneElement(childElement, {
                     onTouchStart: this.handleTouchStart,
                     onTouchEnd: this.handleTouchEnd,
-                    onMouseDown: this.handleMouseDown,
-                    onMouseMove: this.handleMouseMove,
+                    // onMouseDown: this.handleMouseDown,
+                    // onMouseMove: this.handleMouseMove,
                     onDoubleClick: this.handleMouseDoubleClick,
                     onWheel: this.handleMouseWheel,
                     onDragStart: tryCancelEvent,
@@ -614,7 +616,8 @@ PinchZoomPan.defaultProps = {
     position: 'topLeft',
     zoomButtons: true,
     doubleTapBehavior: 'reset',
-    zoomOnScroll: true
+    zoomOnScroll: true,
+    onScaleChange: ()=>{}
 };
 
 PinchZoomPan.propTypes = {
@@ -633,5 +636,6 @@ PinchZoomPan.propTypes = {
     doubleTapBehavior: PropTypes.oneOf(['reset', 'zoom']),
     initialTop: PropTypes.number,
     initialLeft: PropTypes.number,
-    zoomOnScroll: PropTypes.bool
+    zoomOnScroll: PropTypes.bool,
+    onScaleChange: PropTypes.func
 };
