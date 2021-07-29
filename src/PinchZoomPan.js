@@ -69,7 +69,9 @@ const browserPanActions = createSelector(
 //Ensure the image is not over-panned, and not over- or under-scaled.
 //These constraints must be checked when image changes, and when container is resized.
 export default class PinchZoomPan extends React.Component {
-    state = {};
+    state = {
+        isImageMoveable: false
+    };
 
     lastPointerUpTimeStamp; //enables detecting double-tap
     lastPanPointerPosition; //helps determine how far to pan the image
@@ -154,13 +156,17 @@ export default class PinchZoomPan extends React.Component {
     }
 
     handleMouseDown = event => {
-        this.cancelAnimation();
+        if(this.state.isImageMoveable) {
+            this.cancelAnimation();
         this.pointerDown(event);
+        }
     }
 
     handleMouseMove = event => {
         if (!event.buttons) return null;
-        this.pan(event)
+        if(this.state.isImageMoveable) {
+            this.pan(event)
+        }
     }
 
     handleMouseDoubleClick = event => {
@@ -522,14 +528,16 @@ export default class PinchZoomPan extends React.Component {
                     minScale={getMinScale(this.state, this.props)} 
                     maxScale={maxScale} 
                     onZoomOutClick={this.handleZoomOutClick} 
-                    onZoomInClick={this.handleZoomInClick} 
+                    onZoomInClick={this.handleZoomInClick}
+                    isImageMoveable={this.state.isImageMoveable}
+                    toggleImageMove={()=>{this.setState({isImageMoveable:!this.state.isImageMoveable})}}
                 />}
                 {debug && <DebugView {...this.state} overflow={imageOverflow(this.state)} />}
                 {React.cloneElement(childElement, {
                     onTouchStart: this.handleTouchStart,
                     onTouchEnd: this.handleTouchEnd,
-                    // onMouseDown: this.handleMouseDown,
-                    // onMouseMove: this.handleMouseMove,
+                    onMouseDown: this.handleMouseDown,
+                    onMouseMove: this.handleMouseMove,
                     onDoubleClick: this.handleMouseDoubleClick,
                     onWheel: this.handleMouseWheel,
                     onDragStart: tryCancelEvent,
