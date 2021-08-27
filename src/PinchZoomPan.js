@@ -387,7 +387,10 @@ export default class PinchZoomPan extends React.Component {
 
                 //animation runs until we reach the target
                 if (!isEqualTransform(nextTransform, this.state)) {
-                    this.setState(nextTransform, () => this.animation = requestAnimationFrame(frame));
+                    this.setState(nextTransform, () => {
+                        this.animation = requestAnimationFrame(frame);
+                        this.state.onChange(nextTransform);
+                    });
                 }
             };
             this.animation = requestAnimationFrame(frame);
@@ -396,7 +399,7 @@ export default class PinchZoomPan extends React.Component {
                 top,
                 left,
                 scale,
-            });
+            }, () => this.state.onChange({ left, scale, top }));
         }
     }
 
@@ -541,12 +544,14 @@ export default class PinchZoomPan extends React.Component {
         if (nextProps.initialTop !== prevState.initialTop ||
             nextProps.initialLeft !== prevState.initialLeft ||
             nextProps.initialScale !== prevState.initialScale || 
-            nextProps.position !== prevState.position) {
+            nextProps.position !== prevState.position ||
+            nextProps.onChange !== prevState.onChange) {
             return {
                 position: nextProps.position,
                 initialScale: nextProps.initialScale,
                 initialTop: nextProps.initialTop,
                 initialLeft: nextProps.initialLeft,
+                onChange: nextProps.onChange
             };
         } else {
             return null;
@@ -610,7 +615,8 @@ PinchZoomPan.defaultProps = {
     maxScale: 1,
     position: 'topLeft',
     zoomButtons: true,
-    doubleTapBehavior: 'reset'
+    doubleTapBehavior: 'reset',
+    onChange: () => {}
 };
 
 PinchZoomPan.propTypes = {
@@ -629,4 +635,5 @@ PinchZoomPan.propTypes = {
     doubleTapBehavior: PropTypes.oneOf(['reset', 'zoom']),
     initialTop: PropTypes.number,
     initialLeft: PropTypes.number,
+    onChange: PropTypes.func,
 };
