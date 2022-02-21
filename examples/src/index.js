@@ -4,6 +4,19 @@ import PinchZoomPan from "../../src/PinchZoomPan";
 
 const isDevelopment = () => process.env.NODE_ENV !== 'production';
 
+const ControlledContainerView = ({menu, width, height}) => {
+    return (
+        <div>
+            <nav>{menu}</nav>
+            <main style={{ width: `${width}px`, height: `${height}px` }}>
+                <PinchZoomPan zoomButtons={false} doubleTapBehavior='zoom' debug={false} maxScale={2.5} initialScale={1} minScale={1} isControlledZoom threshold={1.5} onTouchMove={(event,shouldStopPropagation) => shouldStopPropagation ? event.stopPropagation() : null} >
+                <img alt='Demo Image' src={`https://imgd.aeplcdn.com/310x174/n/cw/ec/35455/venue-exterior-right-front-three-quarter-2.jpeg?q=75`} />
+                </PinchZoomPan>
+            </main>
+        </div>
+    );
+}
+
 const SizedContainerView = ({menu, width, height}) => {
     const imageWidth = width * 2;
     const imageHeight = height * 2;
@@ -11,8 +24,8 @@ const SizedContainerView = ({menu, width, height}) => {
         <div>
             <nav>{menu}</nav>
             <main style={{ width: `${width}px`, height: `${height}px` }}>
-                <PinchZoomPan zoomButtons={false} doubleTapBehavior='zoom' debug={false} maxScale={2.5} initialScale={1} minScale={1} isControlledZoom threshold={1.5} onTouchMove={(event,shouldStopPropagation) => shouldStopPropagation ? event.stopPropagation() : null} >
-                <img alt='Demo Image' src={`https://imgd.aeplcdn.com/310x174/n/cw/ec/35455/venue-exterior-right-front-three-quarter-2.jpeg?q=75`} />
+                <PinchZoomPan doubleTapBehavior='zoom' debug={isDevelopment()} >
+                <img alt='Demo Image' src={`http://picsum.photos/${imageWidth}/${imageHeight}?random`} />
                 </PinchZoomPan>
             </main>
         </div>
@@ -92,7 +105,7 @@ class App extends React.Component {
         const { viewId } = this.state;
         const menu = <Menu viewId={viewId} onViewChange={this.handleViewChange} />
         return (
-            viewId === 4 ? <SizedContainerView menu={menu} width={310} height={174} />
+            viewId === 4 ? <ControlledContainerView menu={menu} width={310} height={174} />
             : viewId === 2 ? <FlexContainerView menu={menu} />
             : viewId === 3 ? <CenteredView menu={menu} width={300} height={500} imageWidth={200} imageHeight={400} />
             : viewId === 1 ? <SizedContainerView menu={menu} width={500} height={800} />
