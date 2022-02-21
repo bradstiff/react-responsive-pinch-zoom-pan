@@ -11,8 +11,8 @@ const SizedContainerView = ({menu, width, height}) => {
         <div>
             <nav>{menu}</nav>
             <main style={{ width: `${width}px`, height: `${height}px` }}>
-                <PinchZoomPan doubleTapBehavior='zoom' debug={isDevelopment()}>
-                    <img alt='Demo Image' src={`http://picsum.photos/${imageWidth}/${imageHeight}?random`} />
+                <PinchZoomPan zoomButtons={false} doubleTapBehavior='zoom' debug={false} maxScale={2.5} initialScale={1} minScale={1} isControlledZoom threshold={1.5} onTouchMove={(event,shouldStopPropagation) => shouldStopPropagation ? event.stopPropagation() : null} >
+                <img alt='Demo Image' src={`https://imgd.aeplcdn.com/310x174/n/cw/ec/35455/venue-exterior-right-front-three-quarter-2.jpeg?q=75`} />
                 </PinchZoomPan>
             </main>
         </div>
@@ -68,6 +68,7 @@ const Menu = ({viewId, onViewChange}) => {
     return (
         <React.Fragment>
             <span style={{fontSize: 20, fontWeight: 'bold', padding: 10}}>Demo</span>
+            <a href='' onClick={() => onViewChange(4)} style={getLinkStyle(4)}>Controlled Zoom</a>
             <a href='#' onClick={() => onViewChange(0)} style={getLinkStyle(0)}>Small</a>
             <a href='#' onClick={() => onViewChange(1)} style={getLinkStyle(1)}>Medium</a>
             <a href='#' onClick={() => onViewChange(3)} style={getLinkStyle(3)}>Centered</a>
@@ -78,7 +79,7 @@ const Menu = ({viewId, onViewChange}) => {
 
 class App extends React.Component {
     state = {
-        viewId: 0
+        viewId: 4
     }
     
     handleViewChange = viewId => {
@@ -91,7 +92,8 @@ class App extends React.Component {
         const { viewId } = this.state;
         const menu = <Menu viewId={viewId} onViewChange={this.handleViewChange} />
         return (
-            viewId === 2 ? <FlexContainerView menu={menu} />
+            viewId === 4 ? <SizedContainerView menu={menu} width={310} height={174} />
+            : viewId === 2 ? <FlexContainerView menu={menu} />
             : viewId === 3 ? <CenteredView menu={menu} width={300} height={500} imageWidth={200} imageHeight={400} />
             : viewId === 1 ? <SizedContainerView menu={menu} width={500} height={800} />
             : <SizedContainerView menu={menu} width={300} height={500} />
