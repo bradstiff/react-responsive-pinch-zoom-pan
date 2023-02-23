@@ -29,7 +29,9 @@ module.exports = {
         extensions: [".js", ".jsx"]
     },
     devServer: {
-        contentBase: path.join(__dirname, "examples/dist"),
+        static: {
+          directory: path.join(__dirname, "examples/dist"),
+        },
         port: 3001
     },
     devtool: 'source-map'
