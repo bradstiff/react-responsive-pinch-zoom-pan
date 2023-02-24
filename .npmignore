@@ -7,3 +7,6 @@ examples
 .vs
 .vscode
 webpack.config.js
+webpack.config.ts
+.prettierrc
+.tsconfig.json
